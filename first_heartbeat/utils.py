@@ -4,6 +4,8 @@ import glob
 import pathlib
 import datetime
 import logging
+import numpy
+import numpy as np
 
 
 # Setup logger
@@ -170,3 +172,26 @@ def get_exp_info(csv_stem: str) -> dict[str: any]:
     }
 
     return info_dict
+
+
+def real_time(x_data: numpy.ndarray, sec_per_frame: float) -> numpy.ndarray:
+    """Multiply an array of frame numbers by a scaler, such as the calculated seconds per frame.
+    Broadcasting the scaling of a numpy.ndarray is used. The the data type of the input is checked
+    and converted to a numpy.ndarray if not already.
+
+    Args:
+        x_data (numpy.ndarray): Input data, such as an array of frame numbers.
+        sec_per_frame (float): A scaler amount.
+
+    Returns:
+        numpy.ndarray: Output array in seconds.
+    """
+
+    if not isinstance(x_data, numpy.ndarray):
+        x_np = np.array(x_data)
+    else:
+        x_np = x_data
+
+    x_sec: numpy.ndarray = x_np*sec_per_frame
+
+    return x_sec
