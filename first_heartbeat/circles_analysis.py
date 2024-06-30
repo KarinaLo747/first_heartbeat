@@ -105,7 +105,18 @@ def run_analysis(
 
     y_data: pandas.Series = norm_data[circle_roi_cols['mean_LL']]
     peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
-    left_bases: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+    left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+    # Check if number of peaks found matches number of left bases found
+    num_peaks: int = len(peaks_ind)
+    num_left_bases: int = len(peaks_ind)
+    if num_peaks != num_left_bases:
+        raise ValueError(
+            f'''
+            Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
+            Try changing prominence and rel_height arguements.
+            '''
+        )
 
     # calc_beat_freq()
 
