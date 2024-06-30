@@ -6,3 +6,5 @@ circle_roi_cols: dict[str, str] = {
     'mean_RI': 'Mean(RI)',
     'mean_RL': 'Mean(RL)',
 }
+
+decimal_places = 3

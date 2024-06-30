@@ -4,7 +4,7 @@ import numpy as np
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
 from first_heartbeat.load_data import load_circles
-from first_heartbeat.utils import create_output_dir, norm_df, get_exp_info, real_time
+from first_heartbeat.utils import create_output_dir, norm_df, get_exp_info, real_time, calc_beat_freq
 from first_heartbeat.constants import circle_roi_cols
 from first_heartbeat.plotter import time_vs_fluoresence
 
@@ -118,7 +118,8 @@ def run_analysis(
             '''
         )
 
-    # calc_beat_freq()
+    duration = exp_info['duration']
+    beat_freq = calc_beat_freq(duration, num_peaks)
 
     # get_upbeat()
 

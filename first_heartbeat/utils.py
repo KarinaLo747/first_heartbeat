@@ -6,6 +6,7 @@ import datetime
 import logging
 import numpy
 import numpy as np
+from first_heartbeat.constants import decimal_places
 
 
 # Setup logger
@@ -195,3 +196,21 @@ def real_time(x_data: numpy.ndarray, sec_per_frame: float) -> numpy.ndarray:
     x_sec: numpy.ndarray = x_np*sec_per_frame
 
     return x_sec
+
+
+def calc_beat_freq(duration: float, num_peaks: int) -> float:
+    """Calculates beat frequency by dividing the duration of the scan by the number of peaks found.
+    The output is rounded to a pre-defined number of decimal places as defined in first_heartbeat.constants.
+
+    Args:
+        duration (float): Duration of scan in seconds.
+        num_peaks (int): Number of peaks found.
+
+    Returns:
+        float: The beat frequency in units of per second (Hz).
+    """
+
+    beat_freq: float = duration / num_peaks
+    beat_freq: float = round(beat_freq, decimal_places)
+
+    return beat_freq
