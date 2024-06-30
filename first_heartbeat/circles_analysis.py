@@ -109,7 +109,7 @@ def run_analysis(
 
     # Check if number of peaks found matches number of left bases found
     num_peaks: int = len(peaks_ind)
-    num_left_bases: int = len(peaks_ind)
+    num_left_bases: int = len(left_bases_ind)
     if num_peaks != num_left_bases:
         raise ValueError(
             f'''
