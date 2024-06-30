@@ -60,23 +60,19 @@ def find_peak_base_ind(y_data: any, peaks_ind: numpy.ndarray, rel_height: float 
     return left_bases
 
 
-def calc_t_half(
+def find_upbeats(
     y_data: pandas.Series,
     left_bases_ind: numpy.ndarray,
     peaks_ind: numpy.ndarray,
-    kind: str = 'linear',
-) -> tuple[numpy.ndarray]:
+    ) -> tuple[list[numpy.ndarray]]:
 
     # Extract x values from index and y from values.
     # Save as numpy arrays
     x_np = y_data.index.to_numpy()
     y_np = y_data.values
 
-    # Empty lists for x and y coordinates for both t_halfs and upbeats
-    x_t_half_np: numpy.ndarray = np.array([], dtype=float)
-    y_t_half_np: numpy.ndarray = np.array([], dtype=float)
-    x_upbeat_np: numpy.ndarray = np.array([], dtype=int)
-    y_upbeat_np: numpy.ndarray = np.array([], dtype=float)
+    x_upbeat_lst: list[int] = []
+    y_upbeat_lst: list[float] = []
 
     # Loop over the indexes at which the left bases and peaks are found
     for start_ind, end_ind in zip(left_bases_ind, peaks_ind):
@@ -85,6 +81,25 @@ def calc_t_half(
         # Slice by the left base and peak indexes to get the corresponding x and y values
         x_upbeat = x_np[start_ind:end_ind+1]
         y_upbeat = y_np[start_ind:end_ind+1]
+
+        x_upbeat_lst.append(x_upbeat)
+        y_upbeat_lst.append(y_upbeat)
+
+    return x_upbeat_lst, y_upbeat_lst
+
+
+def calc_t_half(
+    x_upbeat_lst: list[numpy.ndarray],
+    y_upbeat_lst: list[numpy.ndarray],
+    kind: str = 'linear',
+) -> tuple[numpy.ndarray]:
+
+    # Empty lists for x and y coordinates for both t_halfs and upbeats
+    x_t_half_np: numpy.ndarray = np.array([], dtype=float)
+    y_t_half_np: numpy.ndarray = np.array([], dtype=float)
+
+    # Loop over the indexes at which the left bases and peaks are found
+    for x_upbeat, y_upbeat in zip(x_upbeat_lst, y_upbeat_lst):
 
         # Calculate the half way point of the y window
         y_t_half = (y_upbeat.max() + y_upbeat.min()) / 2
@@ -98,10 +113,8 @@ def calc_t_half(
         # Append results
         x_t_half_np: numpy.ndarray = np.append(x_t_half_np, x_t_half)
         y_t_half_np: numpy.ndarray = np.append(y_t_half_np, y_t_half)
-        x_upbeat_np: numpy.ndarray = np.append(x_upbeat_np, x_upbeat)
-        y_upbeat_np: numpy.ndarray = np.append(y_upbeat_np, y_upbeat)
 
-    return x_t_half_np, y_t_half_np, x_upbeat_np, y_upbeat_np
+    return x_t_half_np, y_t_half_np
 
 
 def run_analysis(
@@ -163,15 +176,27 @@ def run_analysis(
             '''
         )
 
-    duration = exp_info['duration']
-    beat_freq = calc_beat_freq(duration, num_peaks)
+    duration: float = exp_info['duration']
+    beat_freq: float = calc_beat_freq(duration, num_peaks)
 
-    x_t_half_np, y_t_half_np, x_upbeat_np, y_upbeat_np = calc_t_half(
+    x_upbeat_lst, y_upbeat_lst = find_upbeats(
         y_data=norm_data['Mean(LL)'],
         left_bases_ind=left_bases_ind,
         peaks_ind=peaks_ind,
+    )
+
+    x_t_half_np, y_t_half_np = calc_t_half(
+        x_upbeat_lst=x_upbeat_lst,
+        y_upbeat_lst=y_upbeat_lst,
         kind=kind,
     )
+
+    # x_t_half_np, y_t_half_np, x_upbeat_np, y_upbeat_np = calc_t_half(
+    #     y_data=norm_data['Mean(LL)'],
+    #     left_bases_ind=left_bases_ind,
+    #     peaks_ind=peaks_ind,
+    #     kind=kind,
+    # )
     # x_halfs_sec = real_time(x_halfs_np)
 
     # calc_t_half()
