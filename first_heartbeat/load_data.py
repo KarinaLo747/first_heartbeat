@@ -42,7 +42,7 @@ def load_circles(csv_dir: str, filter_regex: str = None) -> tuple[str, pandas.Da
     if len(csv_files) > 1:
         raise ValueError('There are too many CSV files in the input directory. There must only be one CSV file.')
     csv_file: str = csv_files[0]
-    csv_name: str = pathlib.Path(csv_file).name
+    csv_stem: str = pathlib.Path(csv_file).stem
 
     # Load CSV using pandas
     data: pandas.DataFrame = pd.read_csv(csv_file, index_col=0)
@@ -56,4 +56,4 @@ def load_circles(csv_dir: str, filter_regex: str = None) -> tuple[str, pandas.Da
             raise ValueError(f'Filter using regex \'{filter_regex}\' returned an empty DataFrame. Try again.')
         logger.info(f'Filtered columns using regex \'{filter_regex}\': {', '.join(data.columns)}')
 
-    return csv_name, data
+    return csv_stem, data
