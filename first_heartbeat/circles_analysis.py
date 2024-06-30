@@ -9,7 +9,7 @@ from first_heartbeat.constants import circle_roi_cols
 from first_heartbeat.plotter import time_vs_fluoresence
 
 
-def peak_find(y_data: any, prominence: float = 0.5, height: float = None, width: float = None) -> numpy.ndarray:
+def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, width: float = None) -> numpy.ndarray:
     """Returns the index of peaks found from an array-like input. Uses the scipy.signal.find_peaks.
 
     Args:
@@ -32,7 +32,40 @@ def peak_find(y_data: any, prominence: float = 0.5, height: float = None, width:
     return peaks
 
 
-def run_analysis(data_dir: str, filter_regex: str = None) -> None:
+def find_peak_base_ind(y_data: any, peaks_ind: numpy.ndarray, rel_height: float = 0.95) -> numpy.ndarray:
+    """Returns the index of the left bases found from an array-like input. Uses the scipy.signal.peak_widths.
+
+    Option to return right bases if the following code is added:
+        >>> right_bases: numpy.ndarray = widths[3].astype(int)
+
+    Args:
+        y_data (any): Array-like input containing possible peaks to be found, such as fluoresence intensity data containing signals.
+        peaks_ind (numpy.ndarray): Index of peaks found using scipy.signal.find_peaks on the same input y_data.
+        rel_height (float, optional): As described by scipy.signal.peak_widths documentation.. Defaults to 0.95.
+
+    Returns:
+        numpy.ndarray: Index of left bases found.
+    """
+
+    # Find left and right bases of signals
+    widths = peak_widths(
+        y_data, peaks_ind,
+        rel_height=rel_height,
+    )
+
+    # Left bases have index of 2
+    # Turn float into int
+    left_bases: numpy.ndarray = widths[2].astype(int)
+
+    return left_bases
+
+
+def run_analysis(
+    data_dir: str,
+    filter_regex: str = None,
+    prominence: float = 0.5,
+    rel_height: float = 0.95,
+    ) -> None:
 
     # Define name of dir for all outputs
     output_dir = create_output_dir(data_dir=data_dir)
@@ -71,11 +104,8 @@ def run_analysis(data_dir: str, filter_regex: str = None) -> None:
         )
 
     y_data: pandas.Series = norm_data[circle_roi_cols['mean_LL']]
-    peaks_ind: numpy.ndarray = peak_find(
-        y_data=y_data,
-        prominence=0.5,
-    )
-    print(f'{peaks_ind = }')
+    peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+    left_bases: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
 
     # calc_beat_freq()
 
