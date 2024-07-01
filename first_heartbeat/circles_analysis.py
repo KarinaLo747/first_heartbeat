@@ -189,14 +189,27 @@ def run_analysis(
             xlim=[0, 10],
         )
 
-    x_t_half_dict = {}
-    y_t_half_dict = {}
+    peaks_dict: dict[str, numpy.ndarray] = {}
+    left_bases_dict: dict[str, numpy.ndarray] = {}
+    beat_freq_dict: dict[str, float] = {}
 
-    for roi_name in ['mean_LL', 'mean_LM', 'mean_RL', 'mean_RM']:
+    beat_freq_roi = [
+        'mean_LL',
+        'mean_LI',
+        'mean_LM',
+        'mean_RL',
+        'mean_RI',
+        'mean_RM',
+    ]
+
+    for roi_name in beat_freq_roi:
 
         y_data: pandas.Series = norm_data[circle_roi_cols[roi_name]]
         peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
         left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+        peaks_dict[roi_name] = peaks_ind
+        left_bases_dict[roi_name] = left_bases_ind
 
         # Check if number of peaks found matches number of left bases found
         num_peaks: int = len(peaks_ind)
@@ -211,11 +224,23 @@ def run_analysis(
 
         duration: float = exp_info['duration']
         beat_freq: float = calc_beat_freq(duration, num_peaks)
+        beat_freq_dict[roi_name] = beat_freq
 
+    x_t_half_dict: dict[str, numpy.ndarray] = {}
+    y_t_half_dict: dict[str, numpy.ndarray] = {}
+
+    t_half_roi = [
+        'mean_LL',
+        'mean_LM',
+        'mean_RL',
+        'mean_RM',
+    ]
+
+    for roi_name in t_half_roi:
         x_upbeat_lst, y_upbeat_lst = find_upbeats(
             y_data=norm_data['Mean(LL)'],
-            left_bases_ind=left_bases_ind,
-            peaks_ind=peaks_ind,
+            left_bases_ind=left_bases_dict[roi_name],
+            peaks_ind=peaks_dict[roi_name],
         )
 
         x_t_half_np, y_t_half_np = calc_t_half(
