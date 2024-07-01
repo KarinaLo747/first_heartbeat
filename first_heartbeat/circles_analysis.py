@@ -65,6 +65,17 @@ def find_upbeats(
     left_bases_ind: numpy.ndarray,
     peaks_ind: numpy.ndarray,
     ) -> tuple[list[numpy.ndarray]]:
+    """Returns a list of numpy.ndarray containing the x and y coordinates of the upbeat only for each signal.
+    The upbeat is defined by the starting at the left base of a signal and ending at the peak of a signal.
+
+    Args:
+        y_data (pandas.Series): Fluoresence data containing signals.
+        left_bases_ind (numpy.ndarray): Array containing the indexes of the signal left bases.
+        peaks_ind (numpy.ndarray): Array containing the indexes of the signal peaks.
+
+    Returns:
+        tuple[list[numpy.ndarray]]: Two lists of numpy.ndarray containing the x and y coordinates of the signal upbeats.
+    """
 
     # Extract x values from index and y from values.
     # Save as numpy arrays
@@ -93,6 +104,23 @@ def calc_t_half(
     y_upbeat_lst: list[numpy.ndarray],
     kind: str = 'linear',
 ) -> tuple[numpy.ndarray]:
+    """Returns the x and y cooridnates of the t_half of the pre-calculated upbeats of each signal.
+
+    Process:
+        1) Calculate the halfway point between the y coordinates for the left base and peak of a signal upbeat.
+        2) Define an interpolation function with the signal upbeat x and y coordinates as training data. Note,
+           the general formula is x = f(y) given we have y coordinates of the t_half from step 1 and we want to
+           interpolate the x coordinate of the t_half.
+        3) Return the x and y coordinates of t_half as seperate numpy.ndarray.
+
+    Args:
+        x_upbeat_lst (list[numpy.ndarray]): A list of numpy.ndarray for the x coordiantes of all the data points within a signal upbeat.
+        y_upbeat_lst (list[numpy.ndarray]): A list of numpy.ndarray for the y coordiantes of all the data points within a signal upbeat.
+        kind (str, optional): As described by scipy.interpolate.interp1d.. Defaults to 'linear'.
+
+    Returns:
+        tuple[numpy.ndarray]: Two numpy.ndarray containing the x and y coordinates of t_half of each signal.
+    """
 
     # Empty lists for x and y coordinates for both t_halfs and upbeats
     x_t_half_np: numpy.ndarray = np.array([], dtype=float)
@@ -190,16 +218,6 @@ def run_analysis(
         y_upbeat_lst=y_upbeat_lst,
         kind=kind,
     )
-
-    # x_t_half_np, y_t_half_np, x_upbeat_np, y_upbeat_np = calc_t_half(
-    #     y_data=norm_data['Mean(LL)'],
-    #     left_bases_ind=left_bases_ind,
-    #     peaks_ind=peaks_ind,
-    #     kind=kind,
-    # )
-    # x_halfs_sec = real_time(x_halfs_np)
-
-    # calc_t_half()
 
     # calc_direction()
 
