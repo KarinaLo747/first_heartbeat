@@ -189,35 +189,44 @@ def run_analysis(
             xlim=[0, 10],
         )
 
-    y_data: pandas.Series = norm_data[circle_roi_cols['mean_LL']]
-    peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
-    left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+    x_t_half_dict = {}
+    y_t_half_dict = {}
 
-    # Check if number of peaks found matches number of left bases found
-    num_peaks: int = len(peaks_ind)
-    num_left_bases: int = len(left_bases_ind)
-    if num_peaks != num_left_bases:
-        raise ValueError(
-            f'''
-            Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
-            Try changing prominence and rel_height arguements.
-            '''
+    for roi_name in ['mean_LL', 'mean_LM', 'mean_RL', 'mean_RM']:
+
+        y_data: pandas.Series = norm_data[circle_roi_cols[roi_name]]
+        peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+        left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+        # Check if number of peaks found matches number of left bases found
+        num_peaks: int = len(peaks_ind)
+        num_left_bases: int = len(left_bases_ind)
+        if num_peaks != num_left_bases:
+            raise ValueError(
+                f'''
+                Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
+                Try changing prominence and rel_height arguements.
+                '''
+            )
+
+        duration: float = exp_info['duration']
+        beat_freq: float = calc_beat_freq(duration, num_peaks)
+
+        x_upbeat_lst, y_upbeat_lst = find_upbeats(
+            y_data=norm_data['Mean(LL)'],
+            left_bases_ind=left_bases_ind,
+            peaks_ind=peaks_ind,
         )
 
-    duration: float = exp_info['duration']
-    beat_freq: float = calc_beat_freq(duration, num_peaks)
+        x_t_half_np, y_t_half_np = calc_t_half(
+            x_upbeat_lst=x_upbeat_lst,
+            y_upbeat_lst=y_upbeat_lst,
+            kind=kind,
+        )
 
-    x_upbeat_lst, y_upbeat_lst = find_upbeats(
-        y_data=norm_data['Mean(LL)'],
-        left_bases_ind=left_bases_ind,
-        peaks_ind=peaks_ind,
-    )
+        x_t_half_dict[roi_name] = x_t_half_np
+        y_t_half_dict[roi_name] = y_t_half_np
 
-    x_t_half_np, y_t_half_np = calc_t_half(
-        x_upbeat_lst=x_upbeat_lst,
-        y_upbeat_lst=y_upbeat_lst,
-        kind=kind,
-    )
 
     # calc_direction()
 
