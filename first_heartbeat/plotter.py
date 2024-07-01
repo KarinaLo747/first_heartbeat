@@ -26,18 +26,21 @@ def time_vs_fluoresence(
     title: str = None,
     xlim: list[int] = None,
     ext: str = 'svg',
-    show: bool = False,
 ) -> None:
-    """_summary_
+    """Plots time vs normalised fluorescence intensity. If input DataFrame contains multiple columns,
+    each column is plotted as a separate line labelled with the column header name in the legend.
+
+    Note:
+        The frame number is assumed to be stored in DataFrame index column. The frame number is converted
+        to real time in this function with the inputted sec_per_frame argument.
 
     Args:
-        data (pandas.DataFrame): _description_
-        sec_per_frame (float): _description_
-        output_dir (str): _description_
-        title (str, optional): _description_. Defaults to None.
-        xlim (list[float], optional): _description_. Defaults to None.
-        ext (str, optional): _description_. Defaults to 'svg'.
-        show (bool, optional): _description_. Defaults to False.
+        data (pandas.DataFrame): DataFrame containing fluorescence intensity data as columns indexed by frame number.
+        sec_per_frame (float): Calculated seconds per frame used to scale frame number by.
+        output_dir (str): The location to save the figure to.
+        title (str, optional): Title of the figure. Defaults to None.
+        xlim (list[float], optional): Range of x-axis to show and save. Defaults to None.
+        ext (str, optional): File extension of saved figure, such as \'png\' or \'svg\'. Defaults to 'svg'.
     """
 
     fig, ax = plt.subplots()
@@ -49,7 +52,7 @@ def time_vs_fluoresence(
 
     ax.set_title(title)
     ax.set_xlabel('Time / s')
-    ax.set_ylabel('Fluoresence intensity / a.u.')
+    ax.set_ylabel('Normalised fluorescence intensity / a.u.')
 
     if xlim:
         ax.set_xlim(xlim[0], xlim[1])
@@ -57,8 +60,6 @@ def time_vs_fluoresence(
 
     plt.legend(loc='lower right')
     plt.tight_layout()
-    save_loc = output_dir + title.lower().replace(' ', '_') + '-time_vs_fluoresence_intensity' + '.' + ext.lower()
+    save_loc = output_dir + title.lower().replace(' ', '_') + '-time_vs_fluorescence_intensity' + '.' + ext.lower()
     plt.savefig(save_loc)
     logger.info(f'Saved {save_loc}')
-    if show:
-        plt.show()
