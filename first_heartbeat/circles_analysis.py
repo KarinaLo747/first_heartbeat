@@ -209,8 +209,10 @@ def run_analysis(
     )
 
     sides: dict[str: list['str']] = {
-        'Left side': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LI', 'mean_LM']],
-        'Right side': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RI', 'mean_RM']],
+        'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
+        'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
+        'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
+        'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
     }
 
     for title, side in sides.items():
