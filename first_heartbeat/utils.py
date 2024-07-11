@@ -92,42 +92,35 @@ class Embryo:
 
 
 def get_exp_info(csv_stem: str) -> dict[str: any]:
-    """_summary_
+    """Extracting information embedded in the CSV file name. The seconds per frame is calculated and returned in the output dictionary with key 'sec_per_frame'.
+
+    The CSV file naming convention used is as follows with key information is delimited by \'_\':
+        {yymmdd}_{mouse_line}_E{dpc}_Exp{exp}_E{embryo}_{mag}x_{total_frames}cyc_{cut}_{section}_t{repeat}_ls{linestep}_stage-{stage}_dur-{duration}.csv
+
+        {yymmdd}                    Date
+        {mouse_line}                Mouse line
+        E{dpc}                      Days past coitus
+        Exp{exp}                    Emperiment number
+        E{embryo}                   Embryo number
+        {mag}x                      Microscope magnification
+        {total_frames}cyc           Total number of frames
+        {cut}                       Cut: precut or postcut
+        {section}                   Section cut
+        t{repeat}                   Repeat number
+        ls{linestep}                Linestep amount
+        stage-{stage}               (User defined) Stage of embryo development
+        dur-{duration}              (User defined) Total duration of scanning time in seconds
+
+    Important:
+        The stage and duration is dependent on two hard-coded annotations by the user as follows:
+        {as_saved_by_the_microscope}_stage-{stage_number}_dur-{duration_as_float}.csv
+
+    Args:
+        csv_stem (str): Stem is the filename without the dirpath and extension.
 
     Returns:
-        _type_: _description_
+        dict[str, any]: Keys: ('date', 'mouse_line', 'dpc', 'exp', 'embryo', 'mag', 'total_frames', 'cut', 'section', 'repeat', 'linestep', 'stage', 'duration', 'sec_per_frame')
     """
-    
-    
-    # Extracting information embedded in the CSV file name. The seconds per frame is calculated and returned in the output dictionary with key 'sec_per_frame'.
-
-    # The CSV file naming convention used is as follows with key information is delimited by \'_\':
-    #     {yymmdd}_{mouse_line}_E{dpc}_Exp{exp}_E{embryo}_x{mag}_{total_frames}cyc_{cut}_{section}_t{repeat}_ls{linestep}_stage-{stage}_dur-{duration}.csv
-
-    #     {yymmdd}                    Date
-    #     {mouse_line}                Mouse line
-    #     E{dpc}                      Days past coitus
-    #     Exp{exp}                    Emperiment number
-    #     E{embryo}                   Embryo number
-    #     x{mag}                      Microscope magnification
-    #     {total_frames}cyc           Total number of frames
-    #     {cut}                       Cut: precut or postcut
-    #     {section}                   Section cut
-    #     t{repeat}                   Repeat number
-    #     ls{linestep}                Linestep amount
-    #     stage-{stage}               (User defined) Stage of embryo development
-    #     dur-{duration}              (User defined) Total duration of scanning time in seconds
-
-    # Important:
-    #     The stage and duration is dependent on two hard-coded annotations by the user as follows:
-    #     {as_saved_by_the_microscope}_stage-{stage_number}_dur-{duration_as_float}.csv
-
-    # Args:
-    #     csv_stem (str): Stem is the filename without the dirpath and extension.
-
-    # Returns:
-    #     dict[str, any]: Keys: ('date', 'mouse_line', 'dpc', 'exp', 'embryo', 'mag', 'total_frames', 'cut', 'section', 'repeat', 'linestep', 'stage', 'duration', 'sec_per_frame')
-    # 
 
 
     # Split CSV stem. Stem is the filename without the dirpath and extension
@@ -153,7 +146,7 @@ def get_exp_info(csv_stem: str) -> dict[str: any]:
     embryo: int = int(info_lst[4][1:])
 
     # Magnification of microscope
-    mag: int = int(info_lst[5][1:])
+    mag: int = int(info_lst[5][:-1])
 
     # Total number of frames scanned
     total_frames: int = int(info_lst[6][:-3])
