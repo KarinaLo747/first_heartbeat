@@ -6,6 +6,7 @@ import datetime
 import logging
 import numpy
 import numpy as np
+from dataclasses import dataclass
 from first_heartbeat.constants import decimal_places
 
 
@@ -72,36 +73,61 @@ def norm_df(df: pandas.DataFrame) -> pandas.DataFrame:
     return norm_data
 
 
+@dataclass
+class Embryo:
+    date: datetime.date
+    mouse_line: str
+    dpc: float
+    exp: int
+    embryo: int
+    mag: int
+    total_frames: int
+    cut: str
+    section: str
+    repeat: int
+    linestep: int
+    stage: int
+    duration: float
+    sec_per_frame: float
+
+
 def get_exp_info(csv_stem: str) -> dict[str: any]:
-    """Extracting information embedded in the CSV file name. The seconds per frame is calculated and returned in the output dictionary with key 'sec_per_frame'.
-
-    The CSV file naming convention used is as follows with key information is delimited by \'_\':
-        {yymmdd}_{mouse_line}_E{dpc}_Exp{exp}_E{embryo}_x{mag}_{total_frames}cyc_{cut}_{section}_t{repeat}_ls{linestep}_stage-{stage}_dur-{duration}.csv
-
-        {yymmdd}                    Date
-        {mouse_line}                Mouse line
-        E{dpc}                      Days past coitus
-        Exp{exp}                    Emperiment number
-        E{embryo}                   Embryo number
-        x{mag}                      Microscope magnification
-        {total_frames}cyc           Total number of frames
-        {cut}                       Cut: precut or postcut
-        {section}                   Section cut
-        t{repeat}                   Repeat number
-        ls{linestep}                Linestep amount
-        stage-{stage}               (User defined) Stage of embryo development
-        dur-{duration}              (User defined) Total duration of scanning time in seconds
-
-    Important:
-        The stage and duration is dependent on two hard-coded annotations by the user as follows:
-        {as_saved_by_the_microscope}_stage-{stage_number}_dur-{duration_as_float}.csv
-
-    Args:
-        csv_stem (str): Stem is the filename without the dirpath and extension.
+    """_summary_
 
     Returns:
-        dict[str, any]: Keys: ('date', 'mouse_line', 'dpc', 'exp', 'embryo', 'mag', 'total_frames', 'cut', 'section', 'repeat', 'linestep', 'stage', 'duration', 'sec_per_frame')
+        _type_: _description_
     """
+    
+    
+    # Extracting information embedded in the CSV file name. The seconds per frame is calculated and returned in the output dictionary with key 'sec_per_frame'.
+
+    # The CSV file naming convention used is as follows with key information is delimited by \'_\':
+    #     {yymmdd}_{mouse_line}_E{dpc}_Exp{exp}_E{embryo}_x{mag}_{total_frames}cyc_{cut}_{section}_t{repeat}_ls{linestep}_stage-{stage}_dur-{duration}.csv
+
+    #     {yymmdd}                    Date
+    #     {mouse_line}                Mouse line
+    #     E{dpc}                      Days past coitus
+    #     Exp{exp}                    Emperiment number
+    #     E{embryo}                   Embryo number
+    #     x{mag}                      Microscope magnification
+    #     {total_frames}cyc           Total number of frames
+    #     {cut}                       Cut: precut or postcut
+    #     {section}                   Section cut
+    #     t{repeat}                   Repeat number
+    #     ls{linestep}                Linestep amount
+    #     stage-{stage}               (User defined) Stage of embryo development
+    #     dur-{duration}              (User defined) Total duration of scanning time in seconds
+
+    # Important:
+    #     The stage and duration is dependent on two hard-coded annotations by the user as follows:
+    #     {as_saved_by_the_microscope}_stage-{stage_number}_dur-{duration_as_float}.csv
+
+    # Args:
+    #     csv_stem (str): Stem is the filename without the dirpath and extension.
+
+    # Returns:
+    #     dict[str, any]: Keys: ('date', 'mouse_line', 'dpc', 'exp', 'embryo', 'mag', 'total_frames', 'cut', 'section', 'repeat', 'linestep', 'stage', 'duration', 'sec_per_frame')
+    # 
 
 
     # Split CSV stem. Stem is the filename without the dirpath and extension
@@ -154,25 +180,25 @@ def get_exp_info(csv_stem: str) -> dict[str: any]:
     # Calculated seconds per frame
     sec_per_frame: float = duration / total_frames
 
-    # Create dictionary containing all the experiment info
-    info_dict: dict[str, any] = {
-        'date': date,
-        'mouse_line': mouse_line,
-        'dpc': dpc,
-        'exp': exp,
-        'embryo': embryo,
-        'mag': mag,
-        'total_frames': total_frames,
-        'cut': cut,
-        'section': section,
-        'repeat': repeat,
-        'linestep': linestep,
-        'stage': stage,
-        'duration': duration,
-        'sec_per_frame': sec_per_frame,
-    }
+    # Save all the experiment info to the dataclass Embryo
+    embryo:Embryo = Embryo(
+        date=date,
+        mouse_line=mouse_line,
+        dpc=dpc,
+        exp=exp,
+        embryo=embryo,
+        mag=mag,
+        total_frames=total_frames,
+        cut=cut,
+        section=section,
+        repeat=repeat,
+        linestep=linestep,
+        stage=stage,
+        duration=duration,
+        sec_per_frame=sec_per_frame,
+    )
 
-    return info_dict
+    return embryo
 
 
 def real_time(x_data: numpy.ndarray, sec_per_frame: float) -> numpy.ndarray:

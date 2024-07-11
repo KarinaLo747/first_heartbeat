@@ -62,4 +62,5 @@ def time_vs_fluoresence(
     plt.tight_layout()
     save_loc = output_dir + title.lower().replace(' ', '_') + '-time_vs_fluorescence_intensity' + '.' + ext.lower()
     plt.savefig(save_loc)
+    plt.close()
     logger.info(f'Saved {save_loc}')

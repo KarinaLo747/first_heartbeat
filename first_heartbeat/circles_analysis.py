@@ -4,8 +4,8 @@ import numpy as np
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
 from first_heartbeat.load_data import load_circles
-from first_heartbeat.utils import create_output_dir, norm_df, get_exp_info, real_time, calc_beat_freq
-from first_heartbeat.constants import circle_roi_cols
+from first_heartbeat.utils import create_output_dir, norm_df, Embryo, get_exp_info, real_time, calc_beat_freq
+from first_heartbeat.constants import circle_roi_cols, decimal_places, manual_peak_find_csv
 from first_heartbeat.plotter import time_vs_fluoresence
 
 
@@ -145,6 +145,45 @@ def calc_t_half(
     return x_t_half_np, y_t_half_np
 
 
+def calc_direction(x_t_half_dict):
+
+    RM_t_halfs = x_t_half_dict['mean_RM']
+    RL_t_halfs = x_t_half_dict['mean_RL']
+    LM_t_halfs = x_t_half_dict['mean_LM']
+    LL_t_halfs = x_t_half_dict['mean_LL']
+
+    R_delta_t_halfs = RM_t_halfs - RL_t_halfs
+    # print(f'{R_delta_t_halfs = }\n')
+    R_mean = round(R_delta_t_halfs.mean(), decimal_places)
+    R_std = round(R_delta_t_halfs.std(), decimal_places)
+    # print(f'{R_mean = }')
+    # print(f'{R_std = }')
+
+    # print()
+    if R_mean > 0:
+        R_res = 'lateral -> medial'
+    else:
+        R_res = 'medial -> lateral'
+    # print(R_res)
+
+    L_delta_t_halfs = LM_t_halfs - LL_t_halfs
+    # print(f'{L_delta_t_halfs = }\n')
+    L_mean = round(L_delta_t_halfs.mean(), decimal_places)
+    L_std = round(L_delta_t_halfs.std(), decimal_places)
+    # print(f'{L_mean = }')
+    # print(f'{L_std = }')
+
+    # print()
+    if L_mean > 0:
+        L_res = 'lateral -> medial'
+    else:
+        L_res = 'medial -> lateral'
+    # print(L_res)
+
+    print(f'Left: {L_res} ---> right: {R_res}')
+    print(f'Left: {L_mean} +/- {L_std} ---> right: {R_mean} +/- {R_std}')
+
+
 def run_analysis(
     data_dir: str,
     filter_regex: str = None,
@@ -154,13 +193,13 @@ def run_analysis(
     ) -> None:
 
     # Define name of dir for all outputs
-    output_dir = create_output_dir(data_dir=data_dir)
+    output_dir: str = create_output_dir(data_dir=data_dir)
 
     csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
-    exp_info = get_exp_info(csv_stem=csv_stem)
-    sec_per_frame = exp_info['sec_per_frame']
+    exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
+    sec_per_frame: float = exp_info.sec_per_frame
 
-    norm_data = norm_df(data)
+    norm_data: pandas.DataFrame = norm_df(data)
 
     time_vs_fluoresence(
         data=norm_data,
@@ -173,7 +212,7 @@ def run_analysis(
         'Left side': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LI', 'mean_LM']],
         'Right side': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RI', 'mean_RM']],
     }
-    
+
     for title, side in sides.items():
         time_vs_fluoresence(
             data=norm_data[side],
@@ -193,7 +232,7 @@ def run_analysis(
     left_bases_dict: dict[str, numpy.ndarray] = {}
     beat_freq_dict: dict[str, float] = {}
 
-    beat_freq_roi = [
+    beat_freq_roi: list[str] = [
         'mean_LL',
         'mean_LI',
         'mean_LM',
@@ -213,16 +252,17 @@ def run_analysis(
 
         # Check if number of peaks found matches number of left bases found
         num_peaks: int = len(peaks_ind)
-        num_left_bases: int = len(left_bases_ind)
-        if num_peaks != num_left_bases:
-            raise ValueError(
-                f'''
-                Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
-                Try changing prominence and rel_height arguements.
-                '''
-            )
 
-        duration: float = exp_info['duration']
+        # num_left_bases: int = len(left_bases_ind)
+        # if num_peaks != num_left_bases:
+        #     raise ValueError(
+        #         f'''
+        #         Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
+        #         Try changing prominence and rel_height arguements.
+        #         '''
+        #     )
+
+        duration: float = exp_info.duration
         beat_freq: float = calc_beat_freq(duration, num_peaks)
         beat_freq_dict[roi_name] = beat_freq
 
@@ -252,8 +292,19 @@ def run_analysis(
         x_t_half_dict[roi_name] = x_t_half_np
         y_t_half_dict[roi_name] = y_t_half_np
 
+    print()
+    print(f'Results for {csv_stem}')
 
-    # calc_direction()
+    try:
+        calc_direction(x_t_half_dict)
+    except ValueError:
+        print()
+        print(f'---> Manually select peaks for {csv_stem}')
+        with open(manual_peak_find_csv, 'a') as file:
+            file.write(data_dir + '\n')
+        pass
+
+    print()
 
     # calc_phase_diff()
 
