@@ -184,12 +184,14 @@ def calc_direction(x_t_half_dict):
     print(f'Left: {L_res} ---> right: {R_res}')
     print(f'Left: {L_mean} +/- {L_std} ---> right: {R_mean} +/- {R_std}')
 
+    return L_res, L_mean, L_std, R_res, R_mean, R_std
+
 
 def run_analysis(
     data_dir: str,
     filter_regex: str = None,
     prominence: float = 0.5,
-    rel_height: float = 0.95,
+    rel_height: float = 0.90,
     kind: str = 'linear',
     ) -> None:
 
@@ -348,8 +350,11 @@ def run_analysis(
     print()
     print(f'Results for {csv_stem}')
 
+    L_res, L_mean, L_std = np.nan, np.nan, np.nan
+    R_res, R_mean, R_std = np.nan, np.nan, np.nan
+
     try:
-        calc_direction(x_t_half_dict)
+        L_res, L_mean, L_std, R_res, R_mean, R_std = calc_direction(x_t_half_dict)
     except ValueError:
         print()
         print(f'---> Manually select peaks for {csv_stem}')
@@ -358,6 +363,94 @@ def run_analysis(
         pass
 
     print()
+
+    LI = norm_data[circle_roi_cols['mean_LI']]
+    RI = norm_data[circle_roi_cols['mean_RI']]
+
+    x_np = LI.index.to_numpy()
+    y_LI = LI.values
+    y_RI = RI.values
+    peaks_LI = find_peak_ind(y_LI)
+    peaks_RI = find_peak_ind(y_RI)
+
+    peaks_LI_sec_np = real_time(x_np[peaks_LI], sec_per_frame)
+    peaks_RI_sec_np = real_time(x_np[peaks_RI], sec_per_frame)
+
+    L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(peaks_LI_sec_np)
+    R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(peaks_RI_sec_np)
+
+    Hz_diff = R_Hz_mean - L_Hz_mean
+    len_Hz_diff = R_Hz_len - L_Hz_len
+
+
+    results_dict: dict[str, any] = {
+        'date': exp_info.date,
+        'mouse_line': exp_info.mouse_line,
+        'dpc': exp_info.dpc,
+        'exp': exp_info.exp,
+        'embryo': exp_info.embryo,
+        'mag': exp_info.mag,
+        'total_frames': exp_info.total_frames,
+        'cut': exp_info.cut,
+        'section': exp_info.section,
+        'repeat': exp_info.repeat,
+        'linestep': exp_info.linestep,
+        'stage': exp_info.stage,
+        'duration': exp_info.duration,
+        'sec_per_frame': exp_info.sec_per_frame,
+        'thalf_LM_mean': x_t_half_dict['mean_LM'].mean(),
+        'thalf_LM_std': x_t_half_dict['mean_LM'].std(),
+        'thalf_LL_mean': x_t_half_dict['mean_LL'].mean(),
+        'thalf_LL_std': x_t_half_dict['mean_LL'].std(),
+        'thalf_RM_mean': x_t_half_dict['mean_RM'].mean(),
+        'thalf_RM_std': x_t_half_dict['mean_RM'].std(),
+        'thalf_RL_mean': x_t_half_dict['mean_RL'].mean(),
+        'thalf_RL_std': x_t_half_dict['mean_RL'].std(),
+        'thalf_diff_L_mean': L_mean,
+        'thalf_diff_L_std': L_std,
+        'direction_L': L_res,
+        'thalf_diff_R_mean': R_mean,
+        'thalf_diff_R_std': R_std,
+        'direction_R': R_res,
+        'Hz_L_mean': L_Hz_mean,
+        'Hz_L_std': L_Hz_std,
+        'Hz_L_len': L_Hz_len,
+        'Hz_R_mean': R_Hz_mean,
+        'Hz_R_std': R_Hz_std,
+        'Hz_R_len': R_Hz_len,
+        'Hz_diff': Hz_diff,
+        'len_Hz_diff': len_Hz_diff,
+    }
+
+    return results_dict
+
+
+def peak_to_peak(peaks_I_sec_np: numpy.ndarray):
+
+    I_p2p_diff = []
+
+    peak_1 = peaks_I_sec_np[0]
+    for i in range(1, len(peaks_I_sec_np)):
+        peak_2 = peaks_I_sec_np[i]
+        diff = peak_2 - peak_1
+        I_p2p_diff.append(diff)
+        peak_1 = peak_2
+
+    # print(f'{len(I_p2p_diff) = }')
+    # print(f'{I_p2p_diff = }')
+    # print(f'{1 / np.array(I_p2p_diff) = }')
+
+    Hz_I = 1 / np.array(I_p2p_diff)
+    Hz_len = len(Hz_I)
+    mean = Hz_I.mean()
+    std = Hz_I.std()
+
+    # print(f'{Hz_I = }')
+    # print(f'{Hz_I.mean() = }')
+    # print(f'{Hz_I.std() = }')
+
+    return mean, std, Hz_len
+
 
     # calc_phase_diff()
 
