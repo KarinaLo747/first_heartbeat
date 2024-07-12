@@ -1,6 +1,7 @@
 import pandas
 import numpy
 import numpy as np
+import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
 from first_heartbeat.load_data import load_circles
@@ -206,6 +207,7 @@ def run_analysis(
         sec_per_frame=sec_per_frame,
         output_dir=output_dir,
         title='All ROI',
+        ext='png',
     )
 
     sides: dict[str: list['str']] = {
@@ -221,6 +223,7 @@ def run_analysis(
             sec_per_frame=sec_per_frame,
             output_dir=output_dir,
             title=title,
+            ext='png',
         )
         time_vs_fluoresence(
             data=norm_data[side],
@@ -228,6 +231,7 @@ def run_analysis(
             output_dir=output_dir,
             title=title,
             xlim=[0, 10],
+            ext='png',
         )
 
     peaks_dict: dict[str, numpy.ndarray] = {}
@@ -279,6 +283,35 @@ def run_analysis(
     ]
 
     for roi_name in t_half_roi:
+
+        x_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].index.to_numpy()
+        y_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].values
+
+        # Setup figure to visualise result
+        fig, ax = plt.subplots(
+            2, 2,
+            sharex=True,
+            sharey=True,
+        )
+
+        # Formatting for linewidth (lw), size (s) and markersize (s)
+        lw, s, ms = 1, 15, 5
+
+        # Plot original time vs normalised fluoresence intensity
+        ax[0, 0].set_title('Original plot')
+        for i, j in zip([0, 0, 1], [0, 1, 1]):
+            ax[i, j].plot(real_time(x_np, sec_per_frame), y_np, c='k', lw=lw, label='Original plot')
+
+        peaks_ind = peaks_dict[roi_name]
+        left_bases_ind = left_bases_dict[roi_name]
+        sec_per_frame = exp_info.sec_per_frame
+
+        # Plot left bases and peaks
+        ax[0, 1].set_title('Left bases and peaks')
+        ax[0, 1].scatter(real_time(x_np[peaks_ind], sec_per_frame), y_np[[peaks_ind]], c='darkblue', marker='*', s=s)
+        ax[0, 1].scatter(real_time(x_np[left_bases_ind], sec_per_frame), y_np[left_bases_ind], c='darkblue', marker='^', s=s)
+
+
         x_upbeat_lst, y_upbeat_lst = find_upbeats(
             y_data=norm_data['Mean(LL)'],
             left_bases_ind=left_bases_dict[roi_name],
@@ -293,6 +326,24 @@ def run_analysis(
 
         x_t_half_dict[roi_name] = x_t_half_np
         y_t_half_dict[roi_name] = y_t_half_np
+
+        # Plot ubbeats only showing data points
+        ax[1, 0].set_title('Upbeats')
+        for x_wind, y_wind in zip(x_upbeat_lst, y_upbeat_lst):
+            ax[1, 0].plot(real_time(x_wind, sec_per_frame), y_wind, lw=lw, color='k', marker='.', ms=ms)
+
+        # Plot position of t_half
+        ax[1, 1].set_title('$t_{1/2}$')
+        ax[1, 1].scatter(real_time(x_t_half_np, sec_per_frame), y_t_half_np, c='red', marker='x', s=s)
+
+        # Figure formatting
+        cut = exp_info.cut
+        fig.suptitle(f'{cut.title()} {title}')
+        fig.supxlabel('Time / s')
+        fig.supylabel('Normalised fluoresence intensity / a.u.')
+        plt.tight_layout()
+        plt.savefig(output_dir + f'peak_checker-{roi_name}.png')
+        plt.close()
 
     print()
     print(f'Results for {csv_stem}')
