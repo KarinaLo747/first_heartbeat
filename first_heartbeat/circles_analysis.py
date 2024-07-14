@@ -282,6 +282,7 @@ def manual_peak_pick(
         # Start state
         prominence: float = 0.5
         rel_height: float = 0.90
+        abort = False
 
         # Load data
         col_name: str = circle_roi_cols[roi]
@@ -344,6 +345,7 @@ def manual_peak_pick(
 
             elif prominence_answer.lower() in ('abort', 'ab', 'a'):
                 print(f'{roi}: Aborting')
+                abort = True
                 break
 
             else:
@@ -351,7 +353,7 @@ def manual_peak_pick(
                 continue
 
 
-        while True:
+        while True and abort != True:
 
             # Find peaks and left bases
             peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
