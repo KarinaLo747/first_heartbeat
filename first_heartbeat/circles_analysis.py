@@ -150,11 +150,17 @@ def calc_t_half(
 def calc_direction(x_t_half_dict):
 
     RM_t_halfs = x_t_half_dict['mean_RM']
+    RI_t_halfs = x_t_half_dict['mean_RI']
     RL_t_halfs = x_t_half_dict['mean_RL']
     LM_t_halfs = x_t_half_dict['mean_LM']
+    LI_t_halfs = x_t_half_dict['mean_LI']
     LL_t_halfs = x_t_half_dict['mean_LL']
 
-    R_delta_t_halfs = RM_t_halfs - RL_t_halfs
+    try:
+        R_delta_t_halfs = RM_t_halfs - RL_t_halfs
+    except ValueError:
+        print('Trying RM - RI')
+        R_delta_t_halfs = RM_t_halfs - RI_t_halfs
     # print(f'{R_delta_t_halfs = }\n')
     R_mean = round(R_delta_t_halfs.mean(), decimal_places)
     R_std = round(R_delta_t_halfs.std(), decimal_places)
@@ -168,7 +174,11 @@ def calc_direction(x_t_half_dict):
         R_res = 'medial -> lateral'
     # print(R_res)
 
-    L_delta_t_halfs = LM_t_halfs - LL_t_halfs
+    try:
+        L_delta_t_halfs = LM_t_halfs - LL_t_halfs
+    except ValueError:
+        print('Trying LM - LI')
+        L_delta_t_halfs = LM_t_halfs - LI_t_halfs
     # print(f'{L_delta_t_halfs = }\n')
     L_mean = round(L_delta_t_halfs.mean(), decimal_places)
     L_std = round(L_delta_t_halfs.std(), decimal_places)
@@ -217,7 +227,7 @@ def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
 
 def manual_peak_pick(
     data_dir: str,
-    embryo: str,
+    embryo: int,
     filter_regex: str = None,
     kind: str = 'linear',
     ) -> None:
@@ -437,7 +447,7 @@ def manual_peak_pick(
     except ValueError:
         print()
         print(f'---> Manually select peaks for {csv_stem}')
-        fname = 'E' + embryo + '-' + manual_peak_find_csv
+        fname = 'E' + str(embryo) + '-' + manual_peak_find_csv
         with open(fname, 'a') as file:
             file.write(data_dir + '\n')
         pass
