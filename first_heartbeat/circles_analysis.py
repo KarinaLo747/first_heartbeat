@@ -1,6 +1,7 @@
 import pandas
 import numpy
 import numpy as np
+import json
 import matplotlib.pyplot as plt
 from scipy.signal import find_peaks, peak_widths
 from scipy.interpolate import interp1d
@@ -229,6 +230,38 @@ def manual_peak_pick(
 
     norm_data: pandas.DataFrame = norm_df(data)
 
+    # time_vs_fluoresence(
+    #     data=norm_data,
+    #     sec_per_frame=sec_per_frame,
+    #     output_dir=output_dir,
+    #     title='All ROI',
+    #     ext='svg',
+    # )
+
+    # sides: dict[str: list['str']] = {
+    #     'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
+    #     'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
+    #     'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
+    #     'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
+    # }
+
+    # for title, side in sides.items():
+    #     time_vs_fluoresence(
+    #         data=norm_data[side],
+    #         sec_per_frame=sec_per_frame,
+    #         output_dir=output_dir,
+    #         title=title,
+    #         ext='svg',
+    #     )
+    #     time_vs_fluoresence(
+    #         data=norm_data[side],
+    #         sec_per_frame=sec_per_frame,
+    #         output_dir=output_dir,
+    #         title=title,
+    #         xlim=[0, 10],
+    #         ext='svg',
+    #     )
+
     x_t_half_dict: dict[str, numpy.ndarray] = {}
     y_t_half_dict: dict[str, numpy.ndarray] = {}
 
@@ -240,6 +273,8 @@ def manual_peak_pick(
         'mean_RI',
         'mean_RM',
     ]
+
+    roi_peak_params = {}
 
     for roi in roi_lst:
 
@@ -377,6 +412,15 @@ def manual_peak_pick(
             else:
                 print(f'---> Please enter y or n <---')
                 continue
+
+        roi_peak_params[roi] = {
+            'prominence': prominence,
+            'rel_height': rel_height,
+        }
+
+    json_loc = output_dir + 'peak_params.json'
+    with open(json_loc, 'w') as f:
+        json.dump(roi_peak_params, f, indent=4)
 
     print()
     print(f'Results for {csv_stem}')
