@@ -80,6 +80,8 @@ def t_half_validation(
     x_t_half_np: numpy.ndarray,
     y_t_half_np: numpy.ndarray,
     sec_per_frame: float,
+    output_dir: str,
+    ext: str = 'svg',
     ) -> None:
 
         # Setup figure
@@ -116,6 +118,7 @@ def t_half_validation(
         fig.supxlabel('Time / s')
         fig.supylabel('Normalised fluoresence intensity / a.u.')
         plt.tight_layout()
-        # plt.savefig(output_dir + 't_half_calc-' + cut + '-' + title + '.svg')
+        sav_loc = output_dir + roi + '-t_half_validation.' + ext
+        plt.savefig(sav_loc)
         plt.show()
         plt.close()

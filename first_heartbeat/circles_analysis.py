@@ -187,13 +187,13 @@ def calc_direction(x_t_half_dict):
     return L_res, L_mean, L_std, R_res, R_mean, R_std
 
 
-def peak_to_peak(peaks_I_sec_np: numpy.ndarray):
+def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
 
     I_p2p_diff = []
 
-    peak_1 = peaks_I_sec_np[0]
-    for i in range(1, len(peaks_I_sec_np)):
-        peak_2 = peaks_I_sec_np[i]
+    peak_1 = x_t_half_I_sec_np[0]
+    for i in range(1, len(x_t_half_I_sec_np)):
+        peak_2 = x_t_half_I_sec_np[i]
         diff = peak_2 - peak_1
         I_p2p_diff.append(diff)
         peak_1 = peak_2
@@ -228,6 +228,9 @@ def manual_peak_pick(
     sec_per_frame: float = exp_info.sec_per_frame
 
     norm_data: pandas.DataFrame = norm_df(data)
+
+    x_t_half_dict: dict[str, numpy.ndarray] = {}
+    y_t_half_dict: dict[str, numpy.ndarray] = {}
 
     roi_lst: list[str] = [
         'mean_LL',
@@ -283,6 +286,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
+                output_dir=output_dir,
                 )
 
             prominence_answer: str = input(f'{roi}: peaks satisfactory? [y/n/a]')
@@ -344,6 +348,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
+                output_dir=output_dir,
                 )
 
             rel_height_answer: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
@@ -361,6 +366,8 @@ def manual_peak_pick(
 
             elif rel_height_answer.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
                 print(f'{roi}: Success! Final {rel_height = }')
+                x_t_half_dict[roi] = x_t_half_np
+                y_t_half_dict[roi] = y_t_half_np
                 break
 
             elif rel_height_answer.lower() in ('abort', 'ab', 'a'):
@@ -370,175 +377,6 @@ def manual_peak_pick(
             else:
                 print(f'---> Please enter y or n <---')
                 continue
-
-        ## JSON structure
-        # result = {
-        #     roi: {
-        #         prominence,
-        #         rel_height,
-        #     }
-        # }
-
-
-def run_analysis(
-    data_dir: str,
-    filter_regex: str = None,
-    prominence: float = 0.5,
-    rel_height: float = 0.90,
-    kind: str = 'linear',
-    ) -> None:
-
-    # Define name of dir for all outputs
-    output_dir: str = create_output_dir(data_dir=data_dir)
-
-    csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
-    exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
-    sec_per_frame: float = exp_info.sec_per_frame
-
-    norm_data: pandas.DataFrame = norm_df(data)
-
-    time_vs_fluoresence(
-        data=norm_data,
-        sec_per_frame=sec_per_frame,
-        output_dir=output_dir,
-        title='All ROI',
-        ext='png',
-    )
-
-    sides: dict[str: list['str']] = {
-        'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
-        'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
-        'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
-        'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
-    }
-
-    for title, side in sides.items():
-        time_vs_fluoresence(
-            data=norm_data[side],
-            sec_per_frame=sec_per_frame,
-            output_dir=output_dir,
-            title=title,
-            ext='png',
-        )
-        time_vs_fluoresence(
-            data=norm_data[side],
-            sec_per_frame=sec_per_frame,
-            output_dir=output_dir,
-            title=title,
-            xlim=[0, 10],
-            ext='png',
-        )
-
-    peaks_dict: dict[str, numpy.ndarray] = {}
-    left_bases_dict: dict[str, numpy.ndarray] = {}
-    beat_freq_dict: dict[str, float] = {}
-
-    beat_freq_roi: list[str] = [
-        'mean_LL',
-        'mean_LI',
-        'mean_LM',
-        'mean_RL',
-        'mean_RI',
-        'mean_RM',
-    ]
-
-    for roi_name in beat_freq_roi:
-
-        y_data: pandas.Series = norm_data[circle_roi_cols[roi_name]]
-        peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
-        left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
-
-        peaks_dict[roi_name] = peaks_ind
-        left_bases_dict[roi_name] = left_bases_ind
-
-        # Check if number of peaks found matches number of left bases found
-        num_peaks: int = len(peaks_ind)
-
-        # num_left_bases: int = len(left_bases_ind)
-        # if num_peaks != num_left_bases:
-        #     raise ValueError(
-        #         f'''
-        #         Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
-        #         Try changing prominence and rel_height arguements.
-        #         '''
-        #     )
-
-        duration: float = exp_info.duration
-        beat_freq: float = calc_beat_freq(duration, num_peaks)
-        beat_freq_dict[roi_name] = beat_freq
-
-    x_t_half_dict: dict[str, numpy.ndarray] = {}
-    y_t_half_dict: dict[str, numpy.ndarray] = {}
-
-    t_half_roi = [
-        'mean_LL',
-        'mean_LM',
-        'mean_RL',
-        'mean_RM',
-    ]
-
-    for roi_name in t_half_roi:
-
-        x_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].index.to_numpy()
-        y_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].values
-
-        # Setup figure to visualise result
-        fig, ax = plt.subplots(
-            2, 2,
-            sharex=True,
-            sharey=True,
-        )
-
-        # Formatting for linewidth (lw), size (s) and markersize (s)
-        lw, s, ms = 1, 15, 5
-
-        # Plot original time vs normalised fluoresence intensity
-        ax[0, 0].set_title('Original plot')
-        for i, j in zip([0, 0, 1], [0, 1, 1]):
-            ax[i, j].plot(real_time(x_np, sec_per_frame), y_np, c='k', lw=lw, label='Original plot')
-
-        peaks_ind = peaks_dict[roi_name]
-        left_bases_ind = left_bases_dict[roi_name]
-        sec_per_frame = exp_info.sec_per_frame
-
-        # Plot left bases and peaks
-        ax[0, 1].set_title('Left bases and peaks')
-        ax[0, 1].scatter(real_time(x_np[peaks_ind], sec_per_frame), y_np[[peaks_ind]], c='darkblue', marker='*', s=s)
-        ax[0, 1].scatter(real_time(x_np[left_bases_ind], sec_per_frame), y_np[left_bases_ind], c='darkblue', marker='^', s=s)
-
-
-        x_upbeat_lst, y_upbeat_lst = find_upbeats(
-            y_data=norm_data[circle_roi_cols[roi_name]],
-            left_bases_ind=left_bases_dict[roi_name],
-            peaks_ind=peaks_dict[roi_name],
-        )
-
-        x_t_half_np, y_t_half_np = calc_t_half(
-            x_upbeat_lst=x_upbeat_lst,
-            y_upbeat_lst=y_upbeat_lst,
-            kind=kind,
-        )
-
-        x_t_half_dict[roi_name] = x_t_half_np
-        y_t_half_dict[roi_name] = y_t_half_np
-
-        # Plot ubbeats only showing data points
-        ax[1, 0].set_title('Upbeats')
-        for x_wind, y_wind in zip(x_upbeat_lst, y_upbeat_lst):
-            ax[1, 0].plot(real_time(x_wind, sec_per_frame), y_wind, lw=lw, color='k', marker='.', ms=ms)
-
-        # Plot position of t_half
-        ax[1, 1].set_title('$t_{1/2}$')
-        ax[1, 1].scatter(real_time(x_t_half_np, sec_per_frame), y_t_half_np, c='red', marker='x', s=s)
-
-        # Figure formatting
-        cut = exp_info.cut
-        fig.suptitle(f'{cut.title()} {title}')
-        fig.supxlabel('Time / s')
-        fig.supylabel('Normalised fluoresence intensity / a.u.')
-        plt.tight_layout()
-        plt.savefig(output_dir + f'peak_checker-{roi_name}.png')
-        plt.close()
 
     print()
     print(f'Results for {csv_stem}')
@@ -563,14 +401,21 @@ def run_analysis(
     x_np = LI.index.to_numpy()
     y_LI = LI.values
     y_RI = RI.values
-    peaks_LI = find_peak_ind(y_LI)
-    peaks_RI = find_peak_ind(y_RI)
+    # peaks_LI = find_peak_ind(y_LI)
+    # peaks_RI = find_peak_ind(y_RI)
 
-    peaks_LI_sec_np = real_time(x_np[peaks_LI], sec_per_frame)
-    peaks_RI_sec_np = real_time(x_np[peaks_RI], sec_per_frame)
+    x_t_half_LI = x_t_half_dict['mean_LI']
+    x_t_half_RI = x_t_half_dict['mean_LI']
 
-    L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(peaks_LI_sec_np)
-    R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(peaks_RI_sec_np)
+    # peaks_LI_sec_np = real_time(x_np[peaks_LI], sec_per_frame)
+    # peaks_RI_sec_np = real_time(x_np[peaks_RI], sec_per_frame)
+    x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
+    x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
+
+    # L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(peaks_LI_sec_?np)
+    # R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(peaks_RI_sec_np)
+    L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(x_t_half_LI_sec_np)
+    R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(x_t_half_RI_sec_np)
 
     Hz_diff = R_Hz_mean - L_Hz_mean
     len_Hz_diff = R_Hz_len - L_Hz_len
@@ -616,6 +461,252 @@ def run_analysis(
     }
 
     return results_dict
+
+        ## JSON structure
+        # result = {
+        #     roi: {
+        #         prominence,
+        #         rel_height,
+        #     }
+        # }
+
+
+# def run_analysis(
+#     data_dir: str,
+#     filter_regex: str = None,
+#     prominence: float = 0.5,
+#     rel_height: float = 0.90,
+#     kind: str = 'linear',
+#     ) -> None:
+
+#     # Define name of dir for all outputs
+#     output_dir: str = create_output_dir(data_dir=data_dir)
+
+#     csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
+#     exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
+#     sec_per_frame: float = exp_info.sec_per_frame
+
+#     norm_data: pandas.DataFrame = norm_df(data)
+
+#     time_vs_fluoresence(
+#         data=norm_data,
+#         sec_per_frame=sec_per_frame,
+#         output_dir=output_dir,
+#         title='All ROI',
+#         ext='png',
+#     )
+
+#     sides: dict[str: list['str']] = {
+#         'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
+#         'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
+#         'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
+#         'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
+#     }
+
+#     for title, side in sides.items():
+#         time_vs_fluoresence(
+#             data=norm_data[side],
+#             sec_per_frame=sec_per_frame,
+#             output_dir=output_dir,
+#             title=title,
+#             ext='png',
+#         )
+#         time_vs_fluoresence(
+#             data=norm_data[side],
+#             sec_per_frame=sec_per_frame,
+#             output_dir=output_dir,
+#             title=title,
+#             xlim=[0, 10],
+#             ext='png',
+#         )
+
+#     peaks_dict: dict[str, numpy.ndarray] = {}
+#     left_bases_dict: dict[str, numpy.ndarray] = {}
+#     beat_freq_dict: dict[str, float] = {}
+
+#     beat_freq_roi: list[str] = [
+#         'mean_LL',
+#         'mean_LI',
+#         'mean_LM',
+#         'mean_RL',
+#         'mean_RI',
+#         'mean_RM',
+#     ]
+
+#     for roi_name in beat_freq_roi:
+
+#         y_data: pandas.Series = norm_data[circle_roi_cols[roi_name]]
+#         peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+#         left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+#         peaks_dict[roi_name] = peaks_ind
+#         left_bases_dict[roi_name] = left_bases_ind
+
+#         # Check if number of peaks found matches number of left bases found
+#         num_peaks: int = len(peaks_ind)
+
+#         # num_left_bases: int = len(left_bases_ind)
+#         # if num_peaks != num_left_bases:
+#         #     raise ValueError(
+#         #         f'''
+#         #         Number of peaks found ({num_peaks}) does not match numberof left bases found ({num_left_bases}).
+#         #         Try changing prominence and rel_height arguements.
+#         #         '''
+#         #     )
+
+#         duration: float = exp_info.duration
+#         beat_freq: float = calc_beat_freq(duration, num_peaks)
+#         beat_freq_dict[roi_name] = beat_freq
+
+#     x_t_half_dict: dict[str, numpy.ndarray] = {}
+#     y_t_half_dict: dict[str, numpy.ndarray] = {}
+
+#     t_half_roi = [
+#         'mean_LL',
+#         'mean_LM',
+#         'mean_RL',
+#         'mean_RM',
+#     ]
+
+#     for roi_name in t_half_roi:
+
+#         x_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].index.to_numpy()
+#         y_np: numpy.ndarray = norm_data[circle_roi_cols[roi_name]].values
+
+#         # Setup figure to visualise result
+#         fig, ax = plt.subplots(
+#             2, 2,
+#             sharex=True,
+#             sharey=True,
+#         )
+
+#         # Formatting for linewidth (lw), size (s) and markersize (s)
+#         lw, s, ms = 1, 15, 5
+
+#         # Plot original time vs normalised fluoresence intensity
+#         ax[0, 0].set_title('Original plot')
+#         for i, j in zip([0, 0, 1], [0, 1, 1]):
+#             ax[i, j].plot(real_time(x_np, sec_per_frame), y_np, c='k', lw=lw, label='Original plot')
+
+#         peaks_ind = peaks_dict[roi_name]
+#         left_bases_ind = left_bases_dict[roi_name]
+#         sec_per_frame = exp_info.sec_per_frame
+
+#         # Plot left bases and peaks
+#         ax[0, 1].set_title('Left bases and peaks')
+#         ax[0, 1].scatter(real_time(x_np[peaks_ind], sec_per_frame), y_np[[peaks_ind]], c='darkblue', marker='*', s=s)
+#         ax[0, 1].scatter(real_time(x_np[left_bases_ind], sec_per_frame), y_np[left_bases_ind], c='darkblue', marker='^', s=s)
+
+
+#         x_upbeat_lst, y_upbeat_lst = find_upbeats(
+#             y_data=norm_data[circle_roi_cols[roi_name]],
+#             left_bases_ind=left_bases_dict[roi_name],
+#             peaks_ind=peaks_dict[roi_name],
+#         )
+
+#         x_t_half_np, y_t_half_np = calc_t_half(
+#             x_upbeat_lst=x_upbeat_lst,
+#             y_upbeat_lst=y_upbeat_lst,
+#             kind=kind,
+#         )
+
+#         x_t_half_dict[roi_name] = x_t_half_np
+#         y_t_half_dict[roi_name] = y_t_half_np
+
+#         # Plot ubbeats only showing data points
+#         ax[1, 0].set_title('Upbeats')
+#         for x_wind, y_wind in zip(x_upbeat_lst, y_upbeat_lst):
+#             ax[1, 0].plot(real_time(x_wind, sec_per_frame), y_wind, lw=lw, color='k', marker='.', ms=ms)
+
+#         # Plot position of t_half
+#         ax[1, 1].set_title('$t_{1/2}$')
+#         ax[1, 1].scatter(real_time(x_t_half_np, sec_per_frame), y_t_half_np, c='red', marker='x', s=s)
+
+#         # Figure formatting
+#         cut = exp_info.cut
+#         fig.suptitle(f'{cut.title()} {title}')
+#         fig.supxlabel('Time / s')
+#         fig.supylabel('Normalised fluoresence intensity / a.u.')
+#         plt.tight_layout()
+#         plt.savefig(output_dir + f'peak_checker-{roi_name}.png')
+#         plt.close()
+
+#     print()
+#     print(f'Results for {csv_stem}')
+
+#     L_res, L_mean, L_std = np.nan, np.nan, np.nan
+#     R_res, R_mean, R_std = np.nan, np.nan, np.nan
+
+#     try:
+#         L_res, L_mean, L_std, R_res, R_mean, R_std = calc_direction(x_t_half_dict)
+#     except ValueError:
+#         print()
+#         print(f'---> Manually select peaks for {csv_stem}')
+#         with open(manual_peak_find_csv, 'a') as file:
+#             file.write(data_dir + '\n')
+#         pass
+
+#     print()
+
+#     LI = norm_data[circle_roi_cols['mean_LI']]
+#     RI = norm_data[circle_roi_cols['mean_RI']]
+
+#     x_np = LI.index.to_numpy()
+#     y_LI = LI.values
+#     y_RI = RI.values
+#     peaks_LI = find_peak_ind(y_LI)
+#     peaks_RI = find_peak_ind(y_RI)
+
+#     peaks_LI_sec_np = real_time(x_np[peaks_LI], sec_per_frame)
+#     peaks_RI_sec_np = real_time(x_np[peaks_RI], sec_per_frame)
+
+#     L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(peaks_LI_sec_np)
+#     R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(peaks_RI_sec_np)
+
+#     Hz_diff = R_Hz_mean - L_Hz_mean
+#     len_Hz_diff = R_Hz_len - L_Hz_len
+
+
+#     results_dict: dict[str, any] = {
+#         'date': exp_info.date,
+#         'mouse_line': exp_info.mouse_line,
+#         'dpc': exp_info.dpc,
+#         'exp': exp_info.exp,
+#         'embryo': exp_info.embryo,
+#         'mag': exp_info.mag,
+#         'total_frames': exp_info.total_frames,
+#         'cut': exp_info.cut,
+#         'section': exp_info.section,
+#         'repeat': exp_info.repeat,
+#         'linestep': exp_info.linestep,
+#         'stage': exp_info.stage,
+#         'duration': exp_info.duration,
+#         'sec_per_frame': exp_info.sec_per_frame,
+#         'thalf_LM_mean': x_t_half_dict['mean_LM'].mean(),
+#         'thalf_LM_std': x_t_half_dict['mean_LM'].std(),
+#         'thalf_LL_mean': x_t_half_dict['mean_LL'].mean(),
+#         'thalf_LL_std': x_t_half_dict['mean_LL'].std(),
+#         'thalf_RM_mean': x_t_half_dict['mean_RM'].mean(),
+#         'thalf_RM_std': x_t_half_dict['mean_RM'].std(),
+#         'thalf_RL_mean': x_t_half_dict['mean_RL'].mean(),
+#         'thalf_RL_std': x_t_half_dict['mean_RL'].std(),
+#         'thalf_diff_L_mean': L_mean,
+#         'thalf_diff_L_std': L_std,
+#         'direction_L': L_res,
+#         'thalf_diff_R_mean': R_mean,
+#         'thalf_diff_R_std': R_std,
+#         'direction_R': R_res,
+#         'Hz_L_mean': L_Hz_mean,
+#         'Hz_L_std': L_Hz_std,
+#         'Hz_L_len': L_Hz_len,
+#         'Hz_R_mean': R_Hz_mean,
+#         'Hz_R_std': R_Hz_std,
+#         'Hz_R_len': R_Hz_len,
+#         'Hz_diff': Hz_diff,
+#         'len_Hz_diff': len_Hz_diff,
+#     }
+
+    # return results_dict
 
 
     # calc_phase_diff()
