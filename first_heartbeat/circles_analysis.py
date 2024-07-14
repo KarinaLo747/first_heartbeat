@@ -222,7 +222,8 @@ def manual_peak_pick(
     ) -> None:
 
     # Define name of dir for all outputs
-    output_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
+    interim_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
+    pprocessed_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='processed')
 
     csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
     exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
@@ -230,37 +231,37 @@ def manual_peak_pick(
 
     norm_data: pandas.DataFrame = norm_df(data)
 
-    # time_vs_fluoresence(
-    #     data=norm_data,
-    #     sec_per_frame=sec_per_frame,
-    #     output_dir=output_dir,
-    #     title='All ROI',
-    #     ext='svg',
-    # )
+    time_vs_fluoresence(
+        data=norm_data,
+        sec_per_frame=sec_per_frame,
+        output_dir=pprocessed_dir,
+        title='All ROI',
+        ext='svg',
+    )
 
-    # sides: dict[str: list['str']] = {
-    #     'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
-    #     'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
-    #     'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
-    #     'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
-    # }
+    sides: dict[str: list['str']] = {
+        'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
+        'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
+        'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
+        'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
+    }
 
-    # for title, side in sides.items():
-    #     time_vs_fluoresence(
-    #         data=norm_data[side],
-    #         sec_per_frame=sec_per_frame,
-    #         output_dir=output_dir,
-    #         title=title,
-    #         ext='svg',
-    #     )
-    #     time_vs_fluoresence(
-    #         data=norm_data[side],
-    #         sec_per_frame=sec_per_frame,
-    #         output_dir=output_dir,
-    #         title=title,
-    #         xlim=[0, 10],
-    #         ext='svg',
-    #     )
+    for title, side in sides.items():
+        time_vs_fluoresence(
+            data=norm_data[side],
+            sec_per_frame=sec_per_frame,
+            output_dir=pprocessed_dir,
+            title=title,
+            ext='svg',
+        )
+        time_vs_fluoresence(
+            data=norm_data[side],
+            sec_per_frame=sec_per_frame,
+            output_dir=pprocessed_dir,
+            title=title,
+            xlim=[0, 10],
+            ext='svg',
+        )
 
     x_t_half_dict: dict[str, numpy.ndarray] = {}
     y_t_half_dict: dict[str, numpy.ndarray] = {}
@@ -321,7 +322,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
-                output_dir=output_dir,
+                output_dir=pprocessed_dir,
                 )
 
             prominence_answer: str = input(f'{roi}: peaks satisfactory? [y/n/a]')
@@ -383,7 +384,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
-                output_dir=output_dir,
+                output_dir=pprocessed_dir,
                 )
 
             rel_height_answer: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
@@ -418,7 +419,7 @@ def manual_peak_pick(
             'rel_height': rel_height,
         }
 
-    json_loc = output_dir + 'peak_params.json'
+    json_loc = interim_dir + 'peak_params.json'
     with open(json_loc, 'w') as f:
         json.dump(roi_peak_params, f, indent=4)
 
