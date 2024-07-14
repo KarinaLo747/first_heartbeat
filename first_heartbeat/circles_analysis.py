@@ -217,6 +217,7 @@ def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
 
 def manual_peak_pick(
     data_dir: str,
+    embryo: str,
     filter_regex: str = None,
     kind: str = 'linear',
     ) -> None:
@@ -436,7 +437,8 @@ def manual_peak_pick(
     except ValueError:
         print()
         print(f'---> Manually select peaks for {csv_stem}')
-        with open(manual_peak_find_csv, 'a') as file:
+        fname = 'E' + embryo + '-' + manual_peak_find_csv
+        with open(fname, 'a') as file:
             file.write(data_dir + '\n')
         pass
 
