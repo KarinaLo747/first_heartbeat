@@ -163,6 +163,9 @@ def calc_direction(x_t_half_dict):
         print('Trying RM - RI')
         thalf_diff_R_method = 'RM - RI'
         R_delta_t_halfs = RM_t_halfs - RI_t_halfs
+    except:
+        thalf_diff_R_method = None
+        R_delta_t_halfs = np.nan
     R_mean = round(R_delta_t_halfs.mean(), decimal_places)
     R_std = round(R_delta_t_halfs.std(), decimal_places)
 
@@ -179,6 +182,9 @@ def calc_direction(x_t_half_dict):
         print('Trying LM - LI')
         thalf_diff_L_method = 'LM - LI'
         L_delta_t_halfs = LM_t_halfs - LI_t_halfs
+    except:
+        thalf_diff_L_method = None
+        L_delta_t_halfs = np.nan
     L_mean = round(L_delta_t_halfs.mean(), decimal_places)
     L_std = round(L_delta_t_halfs.std(), decimal_places)
 
