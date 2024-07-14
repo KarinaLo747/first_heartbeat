@@ -285,9 +285,70 @@ def manual_peak_pick(
                 sec_per_frame=sec_per_frame,
                 )
 
-            a: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
+            prominence_answer: str = input(f'{roi}: peaks satisfactory? [y/n/a]')
 
-            if a.lower() in ('n', 'no'):
+            if prominence_answer.lower() in ('n', 'no'):
+
+                print(f'{roi}: Let us try another prominence...')
+
+                try:
+                    prominence = float(input(f'{roi}: Enter prominence (float between 0.0 and 1.0):'))
+
+                except ValueError:
+                    print(f'---> Please enter a float <---')
+                    continue
+
+            elif prominence_answer.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
+                print(f'{roi}: Success! Final {prominence = }')
+                break
+
+            elif prominence_answer.lower() in ('abort', 'ab', 'a'):
+                print(f'{roi}: Aborting')
+                break
+
+            else:
+                print(f'---> Please enter y or n <---')
+                continue
+
+
+        while True:
+
+            # Find peaks and left bases
+            peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+            left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+            # Calculate upbeat
+            x_upbeat_coord_lst, y_upbeat_coord_lst = find_upbeats(
+                y_data=norm_data[col_name],
+                left_bases_ind=left_bases_ind,
+                peaks_ind=peaks_ind,
+            )
+
+            # Calculate t_half
+            x_t_half_np, y_t_half_np = calc_t_half(
+                x_upbeat_lst=x_upbeat_coord_lst,
+                y_upbeat_lst=y_upbeat_coord_lst,
+                kind=kind,
+            )
+
+            t_half_validation(
+                roi=roi,
+                prominence=prominence,
+                rel_height=rel_height,
+                x_np=x_np,
+                y_np=y_np,
+                peaks_ind=peaks_ind,
+                left_bases_ind=left_bases_ind,
+                x_upbeat_coord_lst=x_upbeat_coord_lst,
+                y_upbeat_coord_lst=y_upbeat_coord_lst,
+                x_t_half_np=x_t_half_np,
+                y_t_half_np=y_t_half_np,
+                sec_per_frame=sec_per_frame,
+                )
+
+            rel_height_answer: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
+
+            if rel_height_answer.lower() in ('n', 'no'):
 
                 print(f'{roi}: Let us try another rel_height...')
 
@@ -298,11 +359,11 @@ def manual_peak_pick(
                     print(f'---> Please enter a float <---')
                     continue
 
-            elif a.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
+            elif rel_height_answer.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
                 print(f'{roi}: Success! Final {rel_height = }')
                 break
 
-            elif a.lower() in ('abort', 'ab', 'a'):
+            elif rel_height_answer.lower() in ('abort', 'ab', 'a'):
                 print(f'{roi}: Aborting')
                 break
 
