@@ -220,10 +220,6 @@ def manual_peak_pick(
     kind: str = 'linear',
     ) -> None:
 
-    # Start state
-    prominence: float = 0.5
-    rel_height: float = 0.90
-
     # Define name of dir for all outputs
     output_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
 
@@ -244,44 +240,75 @@ def manual_peak_pick(
 
     for roi in roi_lst:
 
+        # Start state
+        prominence: float = 0.5
+        rel_height: float = 0.90
+
         # Load data
         col_name: str = circle_roi_cols[roi]
         y_data: pandas.Series = norm_data[col_name]
         x_np = y_data.index.to_numpy()
         y_np = y_data.values
 
-        # Find peaks and left bases
-        peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
-        left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+        while True:
 
-        # Calculate upbeat
-        x_upbeat_coord_lst, y_upbeat_coord_lst = find_upbeats(
-            y_data=norm_data[col_name],
-            left_bases_ind=left_bases_ind,
-            peaks_ind=peaks_ind,
-        )
+            # Find peaks and left bases
+            peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+            left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
 
-        # Calculate t_half
-        x_t_half_np, y_t_half_np = calc_t_half(
-            x_upbeat_lst=x_upbeat_coord_lst,
-            y_upbeat_lst=y_upbeat_coord_lst,
-            kind=kind,
-        )
-
-        t_half_validation(
-            roi=roi,
-            prominence=prominence,
-            rel_height=rel_height,
-            x_np=x_np,
-            y_np=y_np,
-            peaks_ind=peaks_ind,
-            left_bases_ind=left_bases_ind,
-            x_upbeat_coord_lst=x_upbeat_coord_lst,
-            y_upbeat_coord_lst=y_upbeat_coord_lst,
-            x_t_half_np=x_t_half_np,
-            y_t_half_np=y_t_half_np,
-            sec_per_frame=sec_per_frame,
+            # Calculate upbeat
+            x_upbeat_coord_lst, y_upbeat_coord_lst = find_upbeats(
+                y_data=norm_data[col_name],
+                left_bases_ind=left_bases_ind,
+                peaks_ind=peaks_ind,
             )
+
+            # Calculate t_half
+            x_t_half_np, y_t_half_np = calc_t_half(
+                x_upbeat_lst=x_upbeat_coord_lst,
+                y_upbeat_lst=y_upbeat_coord_lst,
+                kind=kind,
+            )
+
+            t_half_validation(
+                roi=roi,
+                prominence=prominence,
+                rel_height=rel_height,
+                x_np=x_np,
+                y_np=y_np,
+                peaks_ind=peaks_ind,
+                left_bases_ind=left_bases_ind,
+                x_upbeat_coord_lst=x_upbeat_coord_lst,
+                y_upbeat_coord_lst=y_upbeat_coord_lst,
+                x_t_half_np=x_t_half_np,
+                y_t_half_np=y_t_half_np,
+                sec_per_frame=sec_per_frame,
+                )
+
+            a: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
+
+            if a.lower() in ('n', 'no'):
+
+                print(f'{roi}: Let us try another rel_height...')
+
+                try:
+                    rel_height = float(input(f'{roi}: Enter rel_height (float):'))
+
+                except ValueError:
+                    print(f'---> Please enter a float <---')
+                    continue
+
+            elif a.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
+                print(f'{roi}: Success! Final {rel_height = }')
+                break
+
+            elif a.lower() in ('abort', 'ab', 'a'):
+                print(f'{roi}: Aborting')
+                break
+
+            else:
+                print(f'---> Please enter y or n <---')
+                continue
 
         ## JSON structure
         # result = {
