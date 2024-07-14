@@ -9,4 +9,4 @@ circle_roi_cols: dict[str, str] = {
 
 decimal_places = 3
 
-manual_peak_find_csv = 'manually_select_peaks.csv'
+manual_peak_find_csv = 'troublesome_entries.csv'
