@@ -508,7 +508,7 @@ def run_analysis(
 
 
         x_upbeat_lst, y_upbeat_lst = find_upbeats(
-            y_data=norm_data['Mean(LL)'],
+            y_data=norm_data[circle_roi_cols[roi_name]],
             left_bases_ind=left_bases_dict[roi_name],
             peaks_ind=peaks_dict[roi_name],
         )
