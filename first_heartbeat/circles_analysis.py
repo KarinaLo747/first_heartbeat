@@ -7,7 +7,7 @@ from scipy.interpolate import interp1d
 from first_heartbeat.load_data import load_circles
 from first_heartbeat.utils import create_output_dir, norm_df, Embryo, get_exp_info, real_time, calc_beat_freq
 from first_heartbeat.constants import circle_roi_cols, decimal_places, manual_peak_find_csv
-from first_heartbeat.plotter import time_vs_fluoresence
+from first_heartbeat.plotter import time_vs_fluoresence, t_half_validation
 
 
 def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, width: float = None) -> numpy.ndarray:
@@ -185,6 +185,111 @@ def calc_direction(x_t_half_dict):
     print(f'Left: {L_mean} +/- {L_std} ---> right: {R_mean} +/- {R_std}')
 
     return L_res, L_mean, L_std, R_res, R_mean, R_std
+
+
+def peak_to_peak(peaks_I_sec_np: numpy.ndarray):
+
+    I_p2p_diff = []
+
+    peak_1 = peaks_I_sec_np[0]
+    for i in range(1, len(peaks_I_sec_np)):
+        peak_2 = peaks_I_sec_np[i]
+        diff = peak_2 - peak_1
+        I_p2p_diff.append(diff)
+        peak_1 = peak_2
+
+    # print(f'{len(I_p2p_diff) = }')
+    # print(f'{I_p2p_diff = }')
+    # print(f'{1 / np.array(I_p2p_diff) = }')
+
+    Hz_I = 1 / np.array(I_p2p_diff)
+    Hz_len = len(Hz_I)
+    mean = Hz_I.mean()
+    std = Hz_I.std()
+
+    # print(f'{Hz_I = }')
+    # print(f'{Hz_I.mean() = }')
+    # print(f'{Hz_I.std() = }')
+
+    return mean, std, Hz_len
+
+
+def manual_peak_pick(
+    data_dir: str,
+    filter_regex: str = None,
+    kind: str = 'linear',
+    ) -> None:
+
+    # Start state
+    prominence: float = 0.5
+    rel_height: float = 0.90
+
+    # Define name of dir for all outputs
+    output_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
+
+    csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
+    exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
+    sec_per_frame: float = exp_info.sec_per_frame
+
+    norm_data: pandas.DataFrame = norm_df(data)
+
+    roi_lst: list[str] = [
+        'mean_LL',
+        'mean_LI',
+        'mean_LM',
+        'mean_RL',
+        'mean_RI',
+        'mean_RM',
+    ]
+
+    for roi in roi_lst:
+
+        # Load data
+        col_name: str = circle_roi_cols[roi]
+        y_data: pandas.Series = norm_data[col_name]
+        x_np = y_data.index.to_numpy()
+        y_np = y_data.values
+
+        # Find peaks and left bases
+        peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+        left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+        # Calculate upbeat
+        x_upbeat_coord_lst, y_upbeat_coord_lst = find_upbeats(
+            y_data=norm_data[col_name],
+            left_bases_ind=left_bases_ind,
+            peaks_ind=peaks_ind,
+        )
+
+        # Calculate t_half
+        x_t_half_np, y_t_half_np = calc_t_half(
+            x_upbeat_lst=x_upbeat_coord_lst,
+            y_upbeat_lst=y_upbeat_coord_lst,
+            kind=kind,
+        )
+
+        t_half_validation(
+            roi=roi,
+            prominence=prominence,
+            rel_height=rel_height,
+            x_np=x_np,
+            y_np=y_np,
+            peaks_ind=peaks_ind,
+            left_bases_ind=left_bases_ind,
+            x_upbeat_coord_lst=x_upbeat_coord_lst,
+            y_upbeat_coord_lst=y_upbeat_coord_lst,
+            x_t_half_np=x_t_half_np,
+            y_t_half_np=y_t_half_np,
+            sec_per_frame=sec_per_frame,
+            )
+
+        ## JSON structure
+        # result = {
+        #     roi: {
+        #         prominence,
+        #         rel_height,
+        #     }
+        # }
 
 
 def run_analysis(
@@ -423,33 +528,6 @@ def run_analysis(
     }
 
     return results_dict
-
-
-def peak_to_peak(peaks_I_sec_np: numpy.ndarray):
-
-    I_p2p_diff = []
-
-    peak_1 = peaks_I_sec_np[0]
-    for i in range(1, len(peaks_I_sec_np)):
-        peak_2 = peaks_I_sec_np[i]
-        diff = peak_2 - peak_1
-        I_p2p_diff.append(diff)
-        peak_1 = peak_2
-
-    # print(f'{len(I_p2p_diff) = }')
-    # print(f'{I_p2p_diff = }')
-    # print(f'{1 / np.array(I_p2p_diff) = }')
-
-    Hz_I = 1 / np.array(I_p2p_diff)
-    Hz_len = len(Hz_I)
-    mean = Hz_I.mean()
-    std = Hz_I.std()
-
-    # print(f'{Hz_I = }')
-    # print(f'{Hz_I.mean() = }')
-    # print(f'{Hz_I.std() = }')
-
-    return mean, std, Hz_len
 
 
     # calc_phase_diff()

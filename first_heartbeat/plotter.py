@@ -2,6 +2,7 @@ import numpy
 import logging
 import pandas
 import matplotlib.pyplot as plt
+from first_heartbeat.utils import real_time
 
 
 # Setup logger
@@ -64,3 +65,57 @@ def time_vs_fluoresence(
     plt.savefig(save_loc)
     plt.close()
     logger.info(f'Saved {save_loc}')
+
+
+def t_half_validation(
+    roi: str,
+    prominence: float,
+    rel_height: float,
+    x_np: numpy.ndarray,
+    y_np: numpy.ndarray,
+    peaks_ind: numpy.ndarray,
+    left_bases_ind: numpy.ndarray,
+    x_upbeat_coord_lst: list[numpy.ndarray],
+    y_upbeat_coord_lst: list[numpy.ndarray],
+    x_t_half_np: numpy.ndarray,
+    y_t_half_np: numpy.ndarray,
+    sec_per_frame: float,
+    ) -> None:
+
+        # Setup figure
+        fig, ax = plt.subplots(
+            2, 2,
+            sharex=True,
+            sharey=True,
+        )
+
+        # Formatting for linewidth (lw), size (s) and markersize (s)
+        lw, s, ms = 1, 15, 5
+
+        # Plot original time vs normalised fluoresence intensity
+        ax[0, 0].set_title('Original plot')
+        for i, j in zip([0, 0, 1], [0, 1, 1]):
+            ax[i, j].plot(real_time(x_np, sec_per_frame), y_np, c='k', lw=lw, label='Original plot')
+
+        # Plot left bases and peaks
+        ax[0, 1].set_title('Left bases and peaks')
+        ax[0, 1].scatter(real_time(x_np[peaks_ind], sec_per_frame), y_np[peaks_ind], c='green', marker='*', s=s)
+        ax[0, 1].scatter(real_time(x_np[left_bases_ind], sec_per_frame), y_np[left_bases_ind], c='blue', marker='^', s=s)
+
+        # Plot ubbeats only showing data points
+        ax[1, 0].set_title('Upbeats')
+        for x_coord, y_coord in zip(x_upbeat_coord_lst, y_upbeat_coord_lst):
+            ax[1, 0].plot(real_time(x_coord, sec_per_frame), y_coord, lw=lw, color='k', marker='.', ms=ms)
+
+        # Plot position of t_half
+        ax[1, 1].set_title('$t_{1/2}$')
+        ax[1, 1].scatter(real_time(x_t_half_np, sec_per_frame), y_t_half_np, c='red', marker='x', s=s)
+
+        # Formatting
+        fig.suptitle(f'{roi}\n{prominence = }\n{rel_height = }')
+        fig.supxlabel('Time / s')
+        fig.supylabel('Normalised fluoresence intensity / a.u.')
+        plt.tight_layout()
+        # plt.savefig(output_dir + 't_half_calc-' + cut + '-' + title + '.svg')
+        plt.show()
+        plt.close()
