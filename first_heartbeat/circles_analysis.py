@@ -158,44 +158,40 @@ def calc_direction(x_t_half_dict):
 
     try:
         R_delta_t_halfs = RM_t_halfs - RL_t_halfs
+        thalf_diff_R_method = 'RM - RL'
     except ValueError:
         print('Trying RM - RI')
+        thalf_diff_R_method = 'RM - RI'
         R_delta_t_halfs = RM_t_halfs - RI_t_halfs
-    # print(f'{R_delta_t_halfs = }\n')
     R_mean = round(R_delta_t_halfs.mean(), decimal_places)
     R_std = round(R_delta_t_halfs.std(), decimal_places)
-    # print(f'{R_mean = }')
-    # print(f'{R_std = }')
 
     # print()
     if R_mean > 0:
         R_res = 'lateral -> medial'
     else:
         R_res = 'medial -> lateral'
-    # print(R_res)
 
     try:
         L_delta_t_halfs = LM_t_halfs - LL_t_halfs
+        thalf_diff_L_method = 'LM - LL'
     except ValueError:
         print('Trying LM - LI')
+        thalf_diff_L_method = 'LM - LI'
         L_delta_t_halfs = LM_t_halfs - LI_t_halfs
-    # print(f'{L_delta_t_halfs = }\n')
     L_mean = round(L_delta_t_halfs.mean(), decimal_places)
     L_std = round(L_delta_t_halfs.std(), decimal_places)
-    # print(f'{L_mean = }')
-    # print(f'{L_std = }')
 
     # print()
     if L_mean > 0:
         L_res = 'lateral -> medial'
     else:
         L_res = 'medial -> lateral'
-    # print(L_res)
 
     print(f'Left: {L_res} ---> right: {R_res}')
     print(f'Left: {L_mean} +/- {L_std} ---> right: {R_mean} +/- {R_std}')
 
-    return L_res, L_mean, L_std, R_res, R_mean, R_std
+    return L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method
 
 
 def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
@@ -209,18 +205,10 @@ def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
         I_p2p_diff.append(diff)
         peak_1 = peak_2
 
-    # print(f'{len(I_p2p_diff) = }')
-    # print(f'{I_p2p_diff = }')
-    # print(f'{1 / np.array(I_p2p_diff) = }')
-
     Hz_I = 1 / np.array(I_p2p_diff)
     Hz_len = len(Hz_I)
     mean = Hz_I.mean()
     std = Hz_I.std()
-
-    # print(f'{Hz_I = }')
-    # print(f'{Hz_I.mean() = }')
-    # print(f'{Hz_I.std() = }')
 
     return mean, std, Hz_len
 
@@ -443,7 +431,7 @@ def manual_peak_pick(
     R_res, R_mean, R_std = np.nan, np.nan, np.nan
 
     try:
-        L_res, L_mean, L_std, R_res, R_mean, R_std = calc_direction(x_t_half_dict)
+        L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method = calc_direction(x_t_half_dict)
     except ValueError:
         print()
         print(f'---> Manually select peaks for {csv_stem}')
@@ -452,33 +440,17 @@ def manual_peak_pick(
             file.write(data_dir + '\n')
         pass
 
-    print()
-
-    LI = norm_data[circle_roi_cols['mean_LI']]
-    RI = norm_data[circle_roi_cols['mean_RI']]
-
-    x_np = LI.index.to_numpy()
-    y_LI = LI.values
-    y_RI = RI.values
-    # peaks_LI = find_peak_ind(y_LI)
-    # peaks_RI = find_peak_ind(y_RI)
-
     x_t_half_LI = x_t_half_dict['mean_LI']
     x_t_half_RI = x_t_half_dict['mean_LI']
 
-    # peaks_LI_sec_np = real_time(x_np[peaks_LI], sec_per_frame)
-    # peaks_RI_sec_np = real_time(x_np[peaks_RI], sec_per_frame)
     x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
     x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
 
-    # L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(peaks_LI_sec_?np)
-    # R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(peaks_RI_sec_np)
     L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(x_t_half_LI_sec_np)
     R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(x_t_half_RI_sec_np)
 
     Hz_diff = R_Hz_mean - L_Hz_mean
     len_Hz_diff = R_Hz_len - L_Hz_len
-
 
     results_dict: dict[str, any] = {
         'date': exp_info.date,
@@ -505,9 +477,11 @@ def manual_peak_pick(
         'thalf_RL_std': x_t_half_dict['mean_RL'].std(),
         'thalf_diff_L_mean': L_mean,
         'thalf_diff_L_std': L_std,
+        'thalf_diff_L_method': thalf_diff_L_method,
         'direction_L': L_res,
         'thalf_diff_R_mean': R_mean,
         'thalf_diff_R_std': R_std,
+        'thalf_diff_R_method': thalf_diff_R_method,
         'direction_R': R_res,
         'Hz_L_mean': L_Hz_mean,
         'Hz_L_std': L_Hz_std,
@@ -520,14 +494,6 @@ def manual_peak_pick(
     }
 
     return results_dict
-
-        ## JSON structure
-        # result = {
-        #     roi: {
-        #         prominence,
-        #         rel_height,
-        #     }
-        # }
 
 
 # def run_analysis(
