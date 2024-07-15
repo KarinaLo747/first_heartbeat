@@ -160,9 +160,14 @@ def calc_direction(x_t_half_dict):
         R_delta_t_halfs = RM_t_halfs - RL_t_halfs
         thalf_diff_R_method = 'RM - RL'
     except ValueError:
-        print('Trying RM - RI')
-        thalf_diff_R_method = 'RM - RI'
-        R_delta_t_halfs = RM_t_halfs - RI_t_halfs
+        try:
+            print('Trying RM - RI')
+            thalf_diff_R_method = 'RM - RI'
+            R_delta_t_halfs = RM_t_halfs - RI_t_halfs
+        except ValueError:
+            print('Trying RI - RL')
+            thalf_diff_R_method = 'RI - RL'
+            R_delta_t_halfs = RI_t_halfs - RL_t_halfs
     except:
         thalf_diff_R_method = None
         R_delta_t_halfs = np.nan
@@ -179,9 +184,14 @@ def calc_direction(x_t_half_dict):
         L_delta_t_halfs = LM_t_halfs - LL_t_halfs
         thalf_diff_L_method = 'LM - LL'
     except ValueError:
-        print('Trying LM - LI')
-        thalf_diff_L_method = 'LM - LI'
-        L_delta_t_halfs = LM_t_halfs - LI_t_halfs
+        try:
+            print('Trying LM - LI')
+            thalf_diff_L_method = 'LM - LI'
+            L_delta_t_halfs = LM_t_halfs - LI_t_halfs
+        except ValueError:
+            print('Trying LI - LL')
+            thalf_diff_L_method = 'LI - LL'
+            L_delta_t_halfs = LI_t_halfs - LL_t_halfs
     except:
         thalf_diff_L_method = None
         L_delta_t_halfs = np.nan
