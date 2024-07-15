@@ -174,7 +174,6 @@ def calc_direction(x_t_half_dict):
     R_mean = round(R_delta_t_halfs.mean(), decimal_places)
     R_std = round(R_delta_t_halfs.std(), decimal_places)
 
-    # print()
     if R_mean > 0:
         R_res = 'lateral -> medial'
     else:
@@ -204,10 +203,36 @@ def calc_direction(x_t_half_dict):
     else:
         L_res = 'medial -> lateral'
 
+    overall_direction = None
+
+    # outcome_dict = {
+    #     1: 'Left to Right',
+    #     2: 'Right to Left',
+    #     3: 'Lateral to Medial',
+    #     4: 'Medial to Lateral',
+    # }
+
+    # 1: 'Left to Right',
+    if R_mean < 0 and L_mean > 0:
+        overall_direction = 1
+
+    # 2: 'Right to Left',
+    if R_mean > 0 and L_mean < 0:
+        overall_direction = 2
+
+    # 3: 'Lateral to Medial',
+    if R_mean > 0 and L_mean > 0:
+        overall_direction = 3
+
+    # 4: 'Medial to Lateral',
+    if R_mean < 0 and L_mean < 0:
+        overall_direction = 4
+
     print(f'Left: {L_res} ---> right: {R_res}')
     print(f'Left: {L_mean} +/- {L_std} ---> right: {R_mean} +/- {R_std}')
+    print(f'{overall_direction = }')
 
-    return L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method
+    return L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method, overall_direction
 
 
 def peak_to_peak(x_t_half_I_sec_np: numpy.ndarray):
@@ -238,7 +263,7 @@ def manual_peak_pick(
 
     # Define name of dir for all outputs
     interim_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
-    pprocessed_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='processed')
+    processed_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='processed')
 
     csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
     exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
@@ -249,7 +274,7 @@ def manual_peak_pick(
     time_vs_fluoresence(
         data=norm_data,
         sec_per_frame=sec_per_frame,
-        output_dir=pprocessed_dir,
+        output_dir=processed_dir,
         title='All ROI',
         ext='svg',
     )
@@ -265,14 +290,14 @@ def manual_peak_pick(
         time_vs_fluoresence(
             data=norm_data[side],
             sec_per_frame=sec_per_frame,
-            output_dir=pprocessed_dir,
+            output_dir=processed_dir,
             title=title,
             ext='svg',
         )
         time_vs_fluoresence(
             data=norm_data[side],
             sec_per_frame=sec_per_frame,
-            output_dir=pprocessed_dir,
+            output_dir=processed_dir,
             title=title,
             xlim=[0, 10],
             ext='svg',
@@ -338,7 +363,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
-                output_dir=pprocessed_dir,
+                output_dir=processed_dir,
                 )
 
             print(f'Num. peaks = {len(peaks_ind)}')
@@ -402,7 +427,7 @@ def manual_peak_pick(
                 x_t_half_np=x_t_half_np,
                 y_t_half_np=y_t_half_np,
                 sec_per_frame=sec_per_frame,
-                output_dir=pprocessed_dir,
+                output_dir=processed_dir,
                 )
 
             print(f'Num. peaks = {len(peaks_ind)}')
@@ -449,7 +474,7 @@ def manual_peak_pick(
     R_res, R_mean, R_std = np.nan, np.nan, np.nan
 
     try:
-        L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method = calc_direction(x_t_half_dict)
+        L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method, overall_direction = calc_direction(x_t_half_dict)
     except ValueError:
         print()
         print(f'---> Manually select peaks for {csv_stem}')
@@ -501,6 +526,200 @@ def manual_peak_pick(
         'thalf_diff_R_std': R_std,
         'thalf_diff_R_method': thalf_diff_R_method,
         'direction_R': R_res,
+        'Hz_L_mean': L_Hz_mean,
+        'Hz_L_std': L_Hz_std,
+        'Hz_L_len': L_Hz_len,
+        'Hz_R_mean': R_Hz_mean,
+        'Hz_R_std': R_Hz_std,
+        'Hz_R_len': R_Hz_len,
+        'Hz_diff': Hz_diff,
+        'len_Hz_diff': len_Hz_diff,
+    }
+
+    return results_dict
+
+
+
+def load_peak_params(
+    data_dir: str,
+    filter_regex: str = None,
+    kind: str = 'linear',
+    ) -> None:
+    """_summary_
+
+    outcome_dict = {
+        1: 'Left to Right',
+        2: 'Right to Left',
+        3: 'Lateral to Medial',
+        3: 'Medial to Lateral',
+    }
+
+    Args:
+        data_dir (str): _description_
+        filter_regex (str, optional): _description_. Defaults to None.
+        kind (str, optional): _description_. Defaults to 'linear'.
+    """
+
+    # Define name of dir for all outputs
+    interim_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='interim')
+    processed_dir: str = create_output_dir(data_dir=data_dir, old_subdir='raw', new_subdir='processed')
+
+    csv_stem, data = load_circles(csv_dir=data_dir, filter_regex=filter_regex)
+    exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
+    sec_per_frame: float = exp_info.sec_per_frame
+
+    norm_data: pandas.DataFrame = norm_df(data)
+
+    time_vs_fluoresence(
+        data=norm_data,
+        sec_per_frame=sec_per_frame,
+        output_dir=processed_dir,
+        title='All ROI',
+        ext='svg',
+    )
+
+    sides: dict[str: list['str']] = {
+        'Left side L and M': [circle_roi_cols[col] for col in ['mean_LL', 'mean_LM']],
+        'Right side L and M': [circle_roi_cols[col] for col in ['mean_RL', 'mean_RM']],
+        'Left side I': [circle_roi_cols[col] for col in ['mean_LI']],
+        'Right side I': [circle_roi_cols[col] for col in ['mean_RI']],
+    }
+
+    for title, side in sides.items():
+        time_vs_fluoresence(
+            data=norm_data[side],
+            sec_per_frame=sec_per_frame,
+            output_dir=processed_dir,
+            title=title,
+            ext='svg',
+        )
+        time_vs_fluoresence(
+            data=norm_data[side],
+            sec_per_frame=sec_per_frame,
+            output_dir=processed_dir,
+            title=title,
+            xlim=[0, 10],
+            ext='svg',
+        )
+
+    x_t_half_dict: dict[str, numpy.ndarray] = {}
+    y_t_half_dict: dict[str, numpy.ndarray] = {}
+
+    roi_lst: list[str] = [
+        'mean_LL',
+        'mean_LI',
+        'mean_LM',
+        'mean_RL',
+        'mean_RI',
+        'mean_RM',
+    ]
+
+    roi_peak_params = {}
+
+    json_path: str = interim_dir + 'peak_params.json'
+    with open(json_path) as f:
+        peak_params: dict[dict[str, float]] = json.load(f)
+
+    for roi in roi_lst:
+
+        # Loaded params
+        roi_param: dict[str, float] = peak_params[roi]
+        prominence: float = roi_param['prominence']
+        rel_height: float = roi_param['rel_height']
+
+        # Load data
+        col_name: str = circle_roi_cols[roi]
+        y_data: pandas.Series = norm_data[col_name]
+        x_np = y_data.index.to_numpy()
+        y_np = y_data.values
+
+        peaks_ind: numpy.ndarray = find_peak_ind(y_data=y_data, prominence=prominence)
+        left_bases_ind: numpy.ndarray = find_peak_base_ind(y_data=y_data, peaks_ind=peaks_ind, rel_height=rel_height)
+
+        # Calculate upbeat
+        x_upbeat_coord_lst, y_upbeat_coord_lst = find_upbeats(
+            y_data=norm_data[col_name],
+            left_bases_ind=left_bases_ind,
+            peaks_ind=peaks_ind,
+        )
+
+        # Calculate t_half
+        x_t_half_np, y_t_half_np = calc_t_half(
+            x_upbeat_lst=x_upbeat_coord_lst,
+            y_upbeat_lst=y_upbeat_coord_lst,
+            kind=kind,
+        )
+
+        t_half_validation(
+            roi=roi,
+            prominence=prominence,
+            rel_height=rel_height,
+            x_np=x_np,
+            y_np=y_np,
+            peaks_ind=peaks_ind,
+            left_bases_ind=left_bases_ind,
+            x_upbeat_coord_lst=x_upbeat_coord_lst,
+            y_upbeat_coord_lst=y_upbeat_coord_lst,
+            x_t_half_np=x_t_half_np,
+            y_t_half_np=y_t_half_np,
+            sec_per_frame=sec_per_frame,
+            output_dir=processed_dir,
+            show=False,
+            )
+
+        x_t_half_dict[roi] = x_t_half_np
+        y_t_half_dict[roi] = y_t_half_np
+
+
+    L_res, L_mean, L_std = np.nan, np.nan, np.nan
+    R_res, R_mean, R_std = np.nan, np.nan, np.nan
+
+    L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method, overall_direction = calc_direction(x_t_half_dict)
+
+    x_t_half_LI = x_t_half_dict['mean_LI']
+    x_t_half_RI = x_t_half_dict['mean_LI']
+
+    x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
+    x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
+
+    L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(x_t_half_LI_sec_np)
+    R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(x_t_half_RI_sec_np)
+
+    Hz_diff = R_Hz_mean - L_Hz_mean
+    len_Hz_diff = R_Hz_len - L_Hz_len
+
+    results_dict: dict[str, any] = {
+        'date': exp_info.date,
+        'mouse_line': exp_info.mouse_line,
+        'dpc': exp_info.dpc,
+        'exp': exp_info.exp,
+        'embryo': exp_info.embryo,
+        'mag': exp_info.mag,
+        'total_frames': exp_info.total_frames,
+        'cut': exp_info.cut,
+        'section': exp_info.section,
+        'repeat': exp_info.repeat,
+        'linestep': exp_info.linestep,
+        'stage': exp_info.stage,
+        'duration': exp_info.duration,
+        'sec_per_frame': exp_info.sec_per_frame,
+        'thalf_LM_mean': x_t_half_dict['mean_LM'].mean(),
+        'thalf_LM_std': x_t_half_dict['mean_LM'].std(),
+        'thalf_LL_mean': x_t_half_dict['mean_LL'].mean(),
+        'thalf_LL_std': x_t_half_dict['mean_LL'].std(),
+        'thalf_RM_mean': x_t_half_dict['mean_RM'].mean(),
+        'thalf_RM_std': x_t_half_dict['mean_RM'].std(),
+        'thalf_RL_mean': x_t_half_dict['mean_RL'].mean(),
+        'thalf_RL_std': x_t_half_dict['mean_RL'].std(),
+        'thalf_diff_L_mean': L_mean,
+        'thalf_diff_L_std': L_std,
+        'thalf_diff_L_method': thalf_diff_L_method,
+        'direction_L': L_res,
+        'thalf_diff_R_mean': R_mean,
+        'thalf_diff_R_std': R_std,
+        'thalf_diff_R_method': thalf_diff_R_method,
+        'direction_R': R_res,
+        'overall_direction': overall_direction,
         'Hz_L_mean': L_Hz_mean,
         'Hz_L_std': L_Hz_std,
         'Hz_L_len': L_Hz_len,

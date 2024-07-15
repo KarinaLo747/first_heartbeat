@@ -82,6 +82,7 @@ def t_half_validation(
     sec_per_frame: float,
     output_dir: str,
     ext: str = 'svg',
+    show: bool = True,
     ) -> None:
 
         # Setup figure
@@ -120,5 +121,6 @@ def t_half_validation(
         plt.tight_layout()
         sav_loc = output_dir + roi + '-t_half_validation.' + ext
         plt.savefig(sav_loc)
-        plt.show()
+        if show:
+            plt.show()
         plt.close()
