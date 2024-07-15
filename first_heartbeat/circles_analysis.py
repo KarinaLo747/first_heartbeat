@@ -341,6 +341,7 @@ def manual_peak_pick(
                 output_dir=pprocessed_dir,
                 )
 
+            print(f'Num. peaks = {len(peaks_ind)}')
             prominence_answer: str = input(f'{roi}: peaks satisfactory? [y/n/a]')
 
             if prominence_answer.lower() in ('n', 'no'):
@@ -404,6 +405,7 @@ def manual_peak_pick(
                 output_dir=pprocessed_dir,
                 )
 
+            print(f'Num. peaks = {len(peaks_ind)}')
             rel_height_answer: str = input(f'{roi}: t_half satisfactory? [y/n/a]')
 
             if rel_height_answer.lower() in ('n', 'no'):
