@@ -484,7 +484,7 @@ def manual_peak_pick(
         pass
 
     x_t_half_LI = x_t_half_dict['mean_LI']
-    x_t_half_RI = x_t_half_dict['mean_LI']
+    x_t_half_RI = x_t_half_dict['mean_RI']
 
     x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
     x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
@@ -677,7 +677,7 @@ def load_peak_params(
     L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method, overall_direction = calc_direction(x_t_half_dict)
 
     x_t_half_LI = x_t_half_dict['mean_LI']
-    x_t_half_RI = x_t_half_dict['mean_LI']
+    x_t_half_RI = x_t_half_dict['mean_RI']
 
     x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
     x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
