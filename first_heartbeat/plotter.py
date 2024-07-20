@@ -17,7 +17,7 @@ sh: logging.StreamHandler = logging.StreamHandler()
 
 # Add handlers to logger
 logger.addHandler(fh)
-logger.addHandler(sh)
+# logger.addHandler(sh)
 
 
 def time_vs_fluoresence(

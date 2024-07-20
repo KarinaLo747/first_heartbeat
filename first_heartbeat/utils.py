@@ -22,7 +22,7 @@ sh: logging.StreamHandler = logging.StreamHandler()
 
 # Add handlers to logger
 logger.addHandler(fh)
-logger.addHandler(sh)
+# logger.addHandler(sh)
 
 
 def create_output_dir(data_dir: str, old_subdir: str = 'raw', new_subdir: str = 'processed') -> str:

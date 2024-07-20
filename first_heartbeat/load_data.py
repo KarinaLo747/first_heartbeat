@@ -17,7 +17,7 @@ sh: logging.StreamHandler = logging.StreamHandler()
 
 # Add handlers to logger
 logger.addHandler(fh)
-logger.addHandler(sh)
+# logger.addHandler(sh)
 
 
 def load_circles(csv_dir: str, filter_regex: str = None) -> tuple[str, pandas.DataFrame]:
