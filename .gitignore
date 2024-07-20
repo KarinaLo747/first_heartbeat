@@ -90,6 +90,7 @@ data/
 
 # Project specific data
 myfiles/
+figures/
 *-dev*
 *-project*.ipynb
 *-project*
