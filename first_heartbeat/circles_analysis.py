@@ -13,7 +13,7 @@ from first_heartbeat.constants import circle_roi_cols, decimal_places, manual_pe
 from first_heartbeat.plotter import time_vs_fluoresence, t_half_validation
 
 
-def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, width: float = None) -> numpy.ndarray:
+def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, distance: float = 4.0) -> numpy.ndarray:
     """Returns the index of peaks found from an array-like input. Uses the scipy.signal.find_peaks.
 
     Args:
@@ -30,7 +30,7 @@ def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, wi
         x=y_data,
         prominence=prominence,
         height=height,
-        width=width,
+        distance=distance,
     )
 
     return peaks
@@ -368,6 +368,8 @@ def manual_peak_pick(
     exp_info: Embryo = get_exp_info(csv_stem=csv_stem)
     sec_per_frame: float = exp_info.sec_per_frame
 
+    to_sec = partial(real_time, sec_per_frame=sec_per_frame)
+
     norm_data: pandas.DataFrame = norm_df(data)
 
     save_svg = partial(
@@ -393,18 +395,18 @@ def manual_peak_pick(
     x_t_half_dict: dict[str, numpy.ndarray] = {}
     y_t_half_dict: dict[str, numpy.ndarray] = {}
 
-    roi_lst: list[str] = [
-        'mean_LL',
-        'mean_LI',
-        'mean_LM',
-        'mean_RL',
-        'mean_RI',
-        'mean_RM',
-    ]
+    roi_dict: dict[str, str] = {
+        'mean_LL': 'thalf_LL',
+        'mean_LI': 'thalf_LI',
+        'mean_LM': 'thalf_LM',
+        'mean_RL': 'thalf_RL',
+        'mean_RI': 'thalf_RI',
+        'mean_RM': 'thalf_RM',
+    }
 
     roi_peak_params = {}
 
-    for roi in roi_lst:
+    for roi, thalf_name in roi_dict.items():
 
         # Start state
         prominence: float = 0.5
@@ -533,8 +535,8 @@ def manual_peak_pick(
 
             elif rel_height_answer.lower() in ('y', 'yes', 'ye', 'es', 'ys'):
                 print(f'{roi}: Success! Final {rel_height = }')
-                x_t_half_dict[roi] = x_t_half_np
-                y_t_half_dict[roi] = y_t_half_np
+                x_t_half_dict[thalf_name] = x_t_half_np
+                y_t_half_dict[thalf_name] = y_t_half_np
                 break
 
             elif rel_height_answer.lower() in ('abort', 'ab', 'a'):
@@ -554,33 +556,13 @@ def manual_peak_pick(
     with open(json_loc, 'w') as f:
         json.dump(roi_peak_params, f, indent=4)
 
-    print()
-    print(f'Results for {csv_stem}')
+    thalf: THalf = THalf(**x_t_half_dict)
+    thalf.calc_direction()
 
-    L_res, L_mean, L_std = np.nan, np.nan, np.nan
-    R_res, R_mean, R_std = np.nan, np.nan, np.nan
-
-    try:
-        L_res, L_mean, L_std, R_res, R_mean, R_std, thalf_diff_L_method, thalf_diff_R_method, overall_direction = calc_direction(x_t_half_dict)
-    except ValueError:
-        print()
-        print(f'---> Manually select peaks for {csv_stem}')
-        fname = 'E' + str(embryo) + '-' + manual_peak_find_csv
-        with open(fname, 'a') as file:
-            file.write(data_dir + '\n')
-        pass
-
-    x_t_half_LI = x_t_half_dict['mean_LI']
-    x_t_half_RI = x_t_half_dict['mean_RI']
-
-    x_t_half_LI_sec_np = real_time(x_t_half_LI, sec_per_frame)
-    x_t_half_RI_sec_np = real_time(x_t_half_RI, sec_per_frame)
-
-    L_Hz_mean, L_Hz_std, L_Hz_len = peak_to_peak(x_t_half_LI_sec_np)
-    R_Hz_mean, R_Hz_std, R_Hz_len = peak_to_peak(x_t_half_RI_sec_np)
-
-    Hz_diff = R_Hz_mean - L_Hz_mean
-    len_Hz_diff = R_Hz_len - L_Hz_len
+    rhyth_L = Rhythmicity(thalf=to_sec(thalf.thalf_LI))
+    rhyth_L.calc_rhythmicity()
+    rhyth_R = Rhythmicity(thalf=to_sec(thalf.thalf_RI))
+    rhyth_R.calc_rhythmicity()
 
     results_dict: dict[str, any] = {
         'date': exp_info.date,
@@ -597,30 +579,41 @@ def manual_peak_pick(
         'stage': exp_info.stage,
         'duration': exp_info.duration,
         'sec_per_frame': exp_info.sec_per_frame,
-        'thalf_LM_mean': x_t_half_dict['mean_LM'].mean(),
-        'thalf_LM_std': x_t_half_dict['mean_LM'].std(),
-        'thalf_LL_mean': x_t_half_dict['mean_LL'].mean(),
-        'thalf_LL_std': x_t_half_dict['mean_LL'].std(),
-        'thalf_RM_mean': x_t_half_dict['mean_RM'].mean(),
-        'thalf_RM_std': x_t_half_dict['mean_RM'].std(),
-        'thalf_RL_mean': x_t_half_dict['mean_RL'].mean(),
-        'thalf_RL_std': x_t_half_dict['mean_RL'].std(),
-        'thalf_diff_L_mean': L_mean,
-        'thalf_diff_L_std': L_std,
-        'thalf_diff_L_method': thalf_diff_L_method,
-        'direction_L': L_res,
-        'thalf_diff_R_mean': R_mean,
-        'thalf_diff_R_std': R_std,
-        'thalf_diff_R_method': thalf_diff_R_method,
-        'direction_R': R_res,
-        'Hz_L_mean': L_Hz_mean,
-        'Hz_L_std': L_Hz_std,
-        'Hz_L_len': L_Hz_len,
-        'Hz_R_mean': R_Hz_mean,
-        'Hz_R_std': R_Hz_std,
-        'Hz_R_len': R_Hz_len,
-        'Hz_diff': Hz_diff,
-        'len_Hz_diff': len_Hz_diff,
+        'thalf_LL': thalf.thalf_LL.tolist(),
+        'thalf_LI': thalf.thalf_LI.tolist(),
+        'thalf_LM': thalf.thalf_LM.tolist(),
+        'thalf_RL': thalf.thalf_RL.tolist(),
+        'thalf_RI': thalf.thalf_RI.tolist(),
+        'thalf_RM': thalf.thalf_RM.tolist(),
+        'thalf_LM_mean': thalf.thalf_LM.mean(),
+        'thalf_LM_std': thalf.thalf_LM.std(),
+        'thalf_LL_mean': thalf.thalf_LL.mean(),
+        'thalf_LL_std': thalf.thalf_LL.std(),
+        'thalf_RM_mean': thalf.thalf_RM.mean(),
+        'thalf_RM_std': thalf.thalf_RM.std(),
+        'thalf_RL_mean': thalf.thalf_RL.mean(),
+        'thalf_RL_std': thalf.thalf_RL.std(),
+        'Dthalf_L_mean': thalf.Dthalf_L.mean(),
+        'Dthalf_L_std': thalf.Dthalf_L.std(),
+        'Dthalf_L_method': thalf.Dthalf_L_method,
+        'Dthalf_R_mean': thalf.Dthalf_R.mean(),
+        'Dthalf_R_std': thalf.Dthalf_R.std(),
+        'Dthalf_R_method': thalf.Dthalf_R_method,
+        'direction': thalf.direction,
+        'Hz_L' : rhyth_L.Hz.tolist(),
+        'Hz_L_len' : rhyth_L.Hz_len,
+        'Hz_L_mean' : rhyth_L.Hz_mean,
+        'Hz_L_std' : rhyth_L.Hz_std,
+        'Hz_L_min' : rhyth_L.Hz_min,
+        'Hz_L_max' : rhyth_L.Hz_max,
+        'Hz_L_range' : rhyth_L.Hz_range,
+        'Hz_R' : rhyth_R.Hz.tolist(),
+        'Hz_R_len' : rhyth_R.Hz_len,
+        'Hz_R_mean' : rhyth_R.Hz_mean,
+        'Hz_R_std' : rhyth_R.Hz_std,
+        'Hz_R_min' : rhyth_R.Hz_min,
+        'Hz_R_max' : rhyth_R.Hz_max,
+        'Hz_R_range' : rhyth_R.Hz_range,
     }
 
     return results_dict
