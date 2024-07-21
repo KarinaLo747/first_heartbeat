@@ -13,7 +13,7 @@ from first_heartbeat.constants import circle_roi_cols, decimal_places, manual_pe
 from first_heartbeat.plotter import time_vs_fluoresence, t_half_validation
 
 
-def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, width: float = None) -> numpy.ndarray:
+def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, distance: float = 4.0) -> numpy.ndarray:
     """Returns the index of peaks found from an array-like input. Uses the scipy.signal.find_peaks.
 
     Args:
@@ -30,7 +30,7 @@ def find_peak_ind(y_data: any, prominence: float = 0.5, height: float = None, wi
         x=y_data,
         prominence=prominence,
         height=height,
-        width=width,
+        distance=distance,
     )
 
     return peaks
